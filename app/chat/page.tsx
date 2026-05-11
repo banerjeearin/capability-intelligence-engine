@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  citations?: string[];
+  confidence?: number;
 }
 
 function parseSseChunk(chunk: string): string {
@@ -44,6 +46,7 @@ export default function ChatPage() {
     setError('');
     setIsLoading(true);
     const userMessage: ChatMessage = { role: 'user', content: question.trim() };
+    setMessages((prev) => [...prev, userMessage]);
     setMessages((prev) => [...prev, userMessage, { role: 'assistant', content: '' }]);
 
     try {
@@ -53,6 +56,20 @@ export default function ChatPage() {
         body: JSON.stringify({ userId, message: question })
       });
 
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Chat request failed.');
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: payload.answer,
+          citations: payload.citations,
+          confidence: payload.confidence
+        }
+      ]);
       if (!response.ok || !response.body) {
         const payload = await response.json();
         throw new Error(payload.error ?? 'Chat request failed.');
@@ -110,6 +127,20 @@ export default function ChatPage() {
         {messages.map((message, index) => (
           <div key={`${message.role}-${index}`} className="rounded-md border border-slate-200 bg-white p-4">
             <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">{message.role}</p>
+            <p className="whitespace-pre-wrap text-sm text-slate-800">{message.content}</p>
+            {message.role === 'assistant' ? (
+              <>
+                <p className="mt-2 text-xs text-slate-500">Confidence: {((message.confidence ?? 0) * 100).toFixed(1)}%</p>
+                <ul className="mt-1 list-disc pl-5 text-xs text-slate-600">
+                  {(message.citations ?? []).map((citation) => (
+                    <li key={citation}>{citation}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </div>
+        ))}
+      </div>
             <p className="whitespace-pre-wrap text-sm text-slate-800">{message.content || (message.role === 'assistant' ? '...' : '')}</p>
           </div>
         ))}

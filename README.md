@@ -150,6 +150,27 @@ API routes:
 
 Reports are stored in `reports` table (`report_json`).
 
+
+## Retrieval Quality Optimization
+
+Implemented retrieval-quality upgrades for RAG chat:
+- Hybrid retrieval (semantic + keyword)
+- Metadata filtering support (`documentId`)
+- Reranking pipeline
+- Chunk overlap optimization for ingestion
+- Citation formatting support
+- Retrieval confidence scoring with low-confidence fallback
+
+New services:
+- `lib/services/retrievalService.ts`
+- `lib/services/reranker.ts`
+- `lib/services/citationFormatter.ts`
+
+Chat now returns:
+- grounded answer
+- citations
+- confidence score
+- low-confidence fallback when evidence is weak
 ## Phase 6: Dynamic Assessment Engine
 
 Added:
