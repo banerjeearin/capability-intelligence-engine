@@ -5,6 +5,7 @@ import { loadPrompt } from '@/lib/prompts/promptLoader';
 import { composePrompt } from '@/lib/prompts/promptComposer';
 import { injectContext } from '@/lib/prompts/contextInjector';
 import { startTrace, startSpan, endSpan, langsmithHeaders, structuredLog } from '@/lib/observability/tracing';
+import { applyResponseGuardrails, detectUnsafePrompt, filterSensitiveData } from '@/lib/services/guardrailService';
 import {
   appendConversationMessage,
   createConversation,
@@ -40,6 +41,8 @@ export async function POST(request: NextRequest) {
   try {
     const trace = startTrace('chat_request');
     const body = (await request.json()) as { userId?: string; message?: string; topK?: number; documentId?: string; conversationId?: string };
+    const userId = body.userId?.trim();
+    const message = filterSensitiveData(body.message?.trim() ?? '');
     const body = (await request.json()) as { userId?: string; message?: string; topK?: number; documentId?: string; conversationId?: string };
     const body = (await request.json()) as { userId?: string; message?: string; topK?: number; documentId?: string };
     const body = (await request.json()) as { userId?: string; message?: string; topK?: number };
@@ -51,6 +54,19 @@ export async function POST(request: NextRequest) {
       structuredLog('chat_metrics', { traceId: trace.traceId, reason: 'missing_input' });
       endSpan(trace, { success: false, reason: 'missing_input' });
       return NextResponse.json({ error: 'userId and message are required.' }, { status: 400 });
+    }
+
+
+    if (detectUnsafePrompt(message)) {
+      structuredLog('chat_guardrail', { traceId: trace.traceId, blocked: true, reason: 'unsafe_prompt' });
+      endSpan(trace, { success: false, blocked: true, reason: 'unsafe_prompt' });
+      return NextResponse.json({
+        answer: 'Request blocked by safety guardrails due to unsafe instruction patterns.',
+        citations: [],
+        confidence: 0,
+        lowConfidence: true,
+        blocked: true
+      }, { status: 400 });
     }
 
     const { openAiKey } = getServerConfig();
@@ -65,6 +81,17 @@ export async function POST(request: NextRequest) {
     const citations = formatCitations(retrieval.results);
 
     if (retrieval.confidence < 0.35 || !retrieval.results.length) {
+      const guarded = applyResponseGuardrails({
+        message,
+        evidence: retrieval.results.map((r) => r.content).join('\n'),
+        citations,
+        confidence: retrieval.confidence
+      });
+      structuredLog('chat_metrics', { traceId: trace.traceId, confidence: retrieval.confidence, citations: citations.length, lowConfidence: true, guardrail: guarded.reason });
+      endSpan(trace, { success: true, lowConfidence: true, guardrail: guarded.reason });
+
+      return NextResponse.json({
+        answer: guarded.answer,
       structuredLog('chat_metrics', { traceId: trace.traceId, confidence: retrieval.confidence, citations: citations.length, lowConfidence: true });
       endSpan(trace, { success: true, lowConfidence: true });
 
@@ -193,6 +220,15 @@ export async function POST(request: NextRequest) {
 
     const aiPayload = await aiRes.json();
     endSpan(aiSpan, { ok: true, usage: aiPayload.usage ?? null });
+    const rawAnswer = aiPayload.choices?.[0]?.message?.content ?? 'No response generated.';
+    const guarded = applyResponseGuardrails({
+      message,
+      evidence: evidenceText,
+      citations,
+      confidence: retrieval.confidence,
+      answer: rawAnswer
+    });
+    const answer = guarded.answer;
       return NextResponse.json({ error: 'OpenAI chat failed.', details: await aiRes.text() }, { status: 500 });
     }
 
