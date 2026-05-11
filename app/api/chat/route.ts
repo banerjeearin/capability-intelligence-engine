@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { retrieveEvidence } from '@/lib/services/retrievalService';
 import { formatCitations } from '@/lib/services/citationFormatter';
+import { loadPrompt } from '@/lib/prompts/promptLoader';
+import { composePrompt } from '@/lib/prompts/promptComposer';
+import { injectContext } from '@/lib/prompts/contextInjector';
 
 function getServerConfig() {
   const openAiKey = process.env.OPENAI_API_KEY;
@@ -54,6 +57,17 @@ export async function POST(request: NextRequest) {
       .map((item, idx) => `[Evidence ${idx + 1}] ${item.content}`)
       .join('\n\n');
 
+    const baseSystem = loadPrompt('system', 'base', 'v1');
+    const chatTemplate = loadPrompt('chat', 'answer_with_evidence', 'v1');
+    const userComposed = composePrompt(chatTemplate, {
+      question: message,
+      evidence: evidenceText,
+      citations: citations.join('\n'),
+      confidence: retrieval.confidence.toFixed(3)
+    });
+    const finalSystem = injectContext(baseSystem, [{ title: 'Mode', content: 'Evidence-grounded answering' }]);
+
+    const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       return new Response(JSON.stringify({ error: 'userId and message are required.' }), { status: 400 });
     }
@@ -105,6 +119,8 @@ export async function POST(request: NextRequest) {
         model: 'gpt-4.1-mini',
         temperature: 0.1,
         messages: [
+          { role: 'system', content: finalSystem },
+          { role: 'user', content: userComposed }
           {
             role: 'system',
             content:
