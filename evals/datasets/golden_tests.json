@@ -1,0 +1,37 @@
+[
+  {
+    "id": "ret-001",
+    "type": "retrieval",
+    "query": "ERP modernization integration risk mitigation",
+    "expected_keywords": ["erp", "integration", "risk", "modernization"],
+    "mock_retrieved_chunks": [
+      "Our ERP modernization strategy uses phased integration cutovers and risk registers.",
+      "Change management and architecture governance reduce delivery risk."
+    ]
+  },
+  {
+    "id": "hall-001",
+    "type": "hallucination",
+    "question": "What cloud vendor was used in the uploaded project?",
+    "evidence": "No cloud vendor is mentioned in the provided documents.",
+    "model_answer": "The documents do not provide enough evidence to identify a cloud vendor."
+  },
+  {
+    "id": "cons-001",
+    "type": "consistency",
+    "question": "Summarize execution maturity strengths.",
+    "answers": [
+      "Execution maturity is strong in governance cadence and milestone tracking.",
+      "The profile shows strong execution maturity, especially governance cadence and milestone tracking."
+    ]
+  },
+  {
+    "id": "prompt-001",
+    "type": "prompt_regression",
+    "baseline_prompt": "Answer using only evidence. If insufficient, say so.",
+    "candidate_prompt": "Answer with concise evidence references and state insufficiency when needed.",
+    "question": "Is there evidence of enterprise architecture leadership?",
+    "evidence": "Led enterprise architecture review boards and integration roadmap planning.",
+    "expected_contains": ["evidence", "architecture"]
+  }
+]

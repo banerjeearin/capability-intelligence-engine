@@ -1,0 +1,9 @@
+Score this answer from 1 to 10 for dimension {{dimension}}.
+Return strict JSON:
+{"score": number, "rationale": string}
+
+Question:
+{{question}}
+
+Answer:
+{{answer}}
