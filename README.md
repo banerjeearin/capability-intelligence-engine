@@ -98,5 +98,22 @@ Processing flow:
 Environment variables required for ingestion:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENAI_API_KEY`
+
+
+## Phase 5: AI Chat Over Evidence
+
+Added:
+- Chat UI on `/chat` with streaming assistant responses
+- `POST /api/chat` route
+- Vector search via Supabase RPC `match_document_chunks`
+- Evidence-grounded prompt policy (assistant should state when evidence is insufficient)
+
+Additional migration:
+- `supabase/migrations/202605110002_phase5_match_chunks_function.sql`
+
+Run migrations again after pulling latest changes:
+```bash
+supabase db push
+```
 - AI features are intentionally not implemented in Phase 1.
 - Supabase client is initialized in `lib/supabase.ts` and validates required environment variables.
