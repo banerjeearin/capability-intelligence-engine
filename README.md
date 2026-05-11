@@ -80,5 +80,23 @@ It also enables `pgvector` and adds indexes for:
 - Server route `POST /api/upload` uploads files to Supabase Storage bucket `documents` and inserts metadata into `documents` table.
 - Dashboard fetches uploaded documents via `GET /api/documents?userId=<uuid>` and displays status/metadata.
 - Required server env var: `SUPABASE_SERVICE_ROLE_KEY`.
+
+
+## Phase 4: RAG Ingestion
+
+Added backend document processing route:
+- `POST /api/process-document` with payload `{ userId, documentId }`
+
+Processing flow:
+1. Loads document metadata from `documents` table
+2. Downloads uploaded file from Supabase Storage
+3. Extracts text (`lib/services/textExtractor.ts`)
+4. Chunks text (`lib/services/chunker.ts`)
+5. Generates embeddings via OpenAI (`lib/services/embeddingService.ts`)
+6. Stores chunks + embeddings in `document_chunks` (`lib/services/documentIngestionService.ts`)
+
+Environment variables required for ingestion:
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY`
 - AI features are intentionally not implemented in Phase 1.
 - Supabase client is initialized in `lib/supabase.ts` and validates required environment variables.
