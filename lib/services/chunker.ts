@@ -11,6 +11,8 @@ interface ChunkOptions {
 export function chunkText(text: string, options: ChunkOptions = {}): TextChunk[] {
   const chunkSize = options.chunkSize ?? 1000;
   const overlap = options.overlap ?? 250;
+  const chunkSize = options.chunkSize ?? 1200;
+  const overlap = options.overlap ?? 200;
 
   if (chunkSize <= overlap) {
     throw new Error('chunkSize must be greater than overlap.');
@@ -38,6 +40,14 @@ export function chunkText(text: string, options: ChunkOptions = {}): TextChunk[]
     if (end === normalized.length) break;
 
     start = Math.max(0, end - overlap);
+    const end = Math.min(start + chunkSize, normalized.length);
+    const content = normalized.slice(start, end).trim();
+    if (content) {
+      chunks.push({ chunkIndex: index++, content });
+    }
+
+    if (end === normalized.length) break;
+    start = end - overlap;
   }
 
   return chunks;
