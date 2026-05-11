@@ -1,3 +1,4 @@
+import { startTrace, startSpan, endSpan, structuredLog } from '@/lib/observability/tracing';
 import { generateEmbeddings } from '@/lib/services/embeddingService';
 import { rerankCandidates, RetrievalCandidate } from '@/lib/services/reranker';
 
@@ -18,6 +19,12 @@ function getConfig() {
 }
 
 export async function retrieveEvidence(userId: string, query: string, filters: RetrievalFilters = {}, topK = 5): Promise<RetrievalResult> {
+  const trace = startTrace('retrieval_pipeline', { userId, topK });
+  const root = startSpan(trace, 'retrieve_evidence', { query_length: query.length });
+  const { url, key } = getConfig();
+  const [embedding] = await generateEmbeddings([query]);
+
+  const semanticSpan = startSpan(trace, 'semantic_search');
   const { url, key } = getConfig();
   const [embedding] = await generateEmbeddings([query]);
 
@@ -26,6 +33,12 @@ export async function retrieveEvidence(userId: string, query: string, filters: R
     headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_user_id: userId, query_embedding: embedding, match_count: topK * 3 })
   });
+  if (!semanticRes.ok) {
+    const err = await semanticRes.text();
+    endSpan(semanticSpan, { ok: false, error: err });
+    throw new Error(`Semantic retrieval failed: ${err}`);
+  }
+  endSpan(semanticSpan, { ok: true });
   if (!semanticRes.ok) throw new Error(`Semantic retrieval failed: ${await semanticRes.text()}`);
   const semanticRows = (await semanticRes.json()) as Array<{ id: string; document_id: string; chunk_index: number; content: string; similarity: number }>;
 
@@ -37,6 +50,16 @@ export async function retrieveEvidence(userId: string, query: string, filters: R
   });
   if (filters.documentId) keywordQuery.append('document_id', `eq.${filters.documentId}`);
 
+  const keywordSpan = startSpan(trace, 'keyword_search');
+  const keywordRes = await fetch(`${url}/rest/v1/document_chunks?${keywordQuery.toString()}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` }
+  });
+  if (!keywordRes.ok) {
+    const err = await keywordRes.text();
+    endSpan(keywordSpan, { ok: false, error: err });
+    throw new Error(`Keyword retrieval failed: ${err}`);
+  }
+  endSpan(keywordSpan, { ok: true });
   const keywordRes = await fetch(`${url}/rest/v1/document_chunks?${keywordQuery.toString()}`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` }
   });
@@ -75,6 +98,8 @@ export async function retrieveEvidence(userId: string, query: string, filters: R
   const filtered = [...byId.values()].filter((row) => (!filters.documentId || row.document_id === filters.documentId));
   const reranked = rerankCandidates(query, filtered).slice(0, topK);
   const confidence = reranked.length ? reranked.reduce((sum, row: any) => sum + row.combinedScore, 0) / reranked.length : 0;
+  structuredLog('retrieval_metrics', { userId, topK, confidence, semantic_candidates: semanticRows.length, keyword_candidates: keywordRows.length, final_results: reranked.length });
+  endSpan(root, { confidence, results: reranked.length });
   console.log(`[retrieval] userId=${userId} topK=${topK} confidence=${confidence.toFixed(3)} results=${reranked.length}`);
 
   return { results: reranked, confidence };
