@@ -21,6 +21,10 @@ export async function GET(request: NextRequest) {
 
     if (!userId || userId !== authUserId) {
       return NextResponse.json({ error: 'userId query param must match authenticated user.' }, { status: 400 });
+    const userId = request.nextUrl.searchParams.get('userId')?.trim();
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId query param is required.' }, { status: 400 });
     }
 
     const { url, serviceRoleKey } = getSupabaseServerConfig();
@@ -29,6 +33,7 @@ export async function GET(request: NextRequest) {
       select: 'id,file_name,file_path,mime_type,file_size_bytes,status,created_at',
       order: 'created_at.desc',
       organization_id: `eq.${organizationId}`
+      order: 'created_at.desc'
     });
 
     const response = await fetch(`${url}/rest/v1/documents?${query.toString()}`, {

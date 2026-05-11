@@ -15,6 +15,17 @@ export default function LandingPage() {
           <Link href="/chat"><Button variant="outline">Launch Executive Copilot</Button></Link>
         </div>
       </section>
+      <p className="mb-6 max-w-2xl text-slate-600">
+        Evaluate enterprise AI transformation readiness with structured assessments, evidence-based workflows, and actionable reporting.
+      </p>
+      <div className="flex gap-3">
+        <Link href="/dashboard">
+          <Button>Go to Dashboard</Button>
+        </Link>
+        <Link href="/upload">
+          <Button variant="outline">Start Upload</Button>
+        </Link>
+      </div>
     </PageShell>
   );
 }

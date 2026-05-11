@@ -79,6 +79,12 @@ export default function AssessmentPage() {
         <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Scoring...' : 'Submit Assessment'}</Button>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </form>
+import { PageShell } from '@/components/layout/page-shell';
+
+export default function AssessmentPage() {
+  return (
+    <PageShell title="Assessment">
+      <p className="text-slate-600">Run structured readiness and fit assessments across transformation dimensions.</p>
     </PageShell>
   );
 }

@@ -25,6 +25,9 @@ export async function retrieveEvidence(userId: string, query: string, filters: R
   const [embedding] = await generateEmbeddings([query]);
 
   const semanticSpan = startSpan(trace, 'semantic_search');
+  const { url, key } = getConfig();
+  const [embedding] = await generateEmbeddings([query]);
+
   const semanticRes = await fetch(`${url}/rest/v1/rpc/match_document_chunks`, {
     method: 'POST',
     headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -36,6 +39,7 @@ export async function retrieveEvidence(userId: string, query: string, filters: R
     throw new Error(`Semantic retrieval failed: ${err}`);
   }
   endSpan(semanticSpan, { ok: true });
+  if (!semanticRes.ok) throw new Error(`Semantic retrieval failed: ${await semanticRes.text()}`);
   const semanticRows = (await semanticRes.json()) as Array<{ id: string; document_id: string; chunk_index: number; content: string; similarity: number }>;
 
   const keywordQuery = new URLSearchParams({
@@ -56,6 +60,10 @@ export async function retrieveEvidence(userId: string, query: string, filters: R
     throw new Error(`Keyword retrieval failed: ${err}`);
   }
   endSpan(keywordSpan, { ok: true });
+  const keywordRes = await fetch(`${url}/rest/v1/document_chunks?${keywordQuery.toString()}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` }
+  });
+  if (!keywordRes.ok) throw new Error(`Keyword retrieval failed: ${await keywordRes.text()}`);
   const keywordRows = (await keywordRes.json()) as Array<{ id: string; document_id: string; chunk_index: number; content: string; metadata: Record<string, unknown> }>;
 
   const byId = new Map<string, RetrievalCandidate>();
@@ -92,6 +100,7 @@ export async function retrieveEvidence(userId: string, query: string, filters: R
   const confidence = reranked.length ? reranked.reduce((sum, row: any) => sum + row.combinedScore, 0) / reranked.length : 0;
   structuredLog('retrieval_metrics', { userId, topK, confidence, semantic_candidates: semanticRows.length, keyword_candidates: keywordRows.length, final_results: reranked.length });
   endSpan(root, { confidence, results: reranked.length });
+  console.log(`[retrieval] userId=${userId} topK=${topK} confidence=${confidence.toFixed(3)} results=${reranked.length}`);
 
   return { results: reranked, confidence };
 }

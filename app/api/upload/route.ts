@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
 
     if (!userId || userId !== authUserId) {
       return NextResponse.json({ error: 'userId must match authenticated user.' }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required.' }, { status: 400 });
     }
 
     if (!ALLOWED_TYPES.has(file.type)) {
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
         file_size_bytes: file.size,
         status: 'uploaded',
         organization_id: organizationId
+        status: 'uploaded'
       })
     });
 
