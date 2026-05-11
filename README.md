@@ -171,6 +171,78 @@ Chat now returns:
 - citations
 - confidence score
 - low-confidence fallback when evidence is weak
+
+
+## AI Evaluation Framework
+
+Evaluation assets are in `evals/`:
+- `datasets/golden_tests.json` (golden test dataset)
+- `scoringMetrics.mjs` (retrieval precision, grounding score, answer consistency, hallucination rate)
+- `run-evals.mjs` (evaluation runner)
+- `reports/*.json` (generated evaluation reports)
+
+Run locally:
+```bash
+npm run evals
+```
+
+This enables prompt regression benchmarking and local quality checks before prompt/retrieval changes ship.
+
+
+## Phase 6: Dynamic Assessment Engine
+
+Added:
+- Dynamic assessment flow on `/assessment` covering:
+  - Strategic thinking
+  - Enterprise architecture
+  - AI capability
+  - Execution maturity
+  - Leadership
+  - Systems thinking
+- Answer capture and submission to `POST /api/assessment/score`
+- AI scoring using OpenAI
+- Score persistence into `assessments` and `assessment_scores` tables
+- Results page at `/assessment/results/[assessmentId]` with per-dimension and overall score
+
+
+## Phase 7: Fit Report Generation
+
+Added report generation and display on `/reports`:
+- Executive summary
+- Capability scores
+- Evidence-backed strengths
+- Risk areas
+- Recommended role fit
+- Final recommendation
+
+API routes:
+- `POST /api/reports/generate`
+- `GET /api/reports?userId=<uuid>`
+- `GET /api/reports/[reportId]/export` (PDF download endpoint)
+
+Reports are stored in `reports` table (`report_json`).
+
+
+## Retrieval Quality Optimization
+
+Implemented retrieval-quality upgrades for RAG chat:
+- Hybrid retrieval (semantic + keyword)
+- Metadata filtering support (`documentId`)
+- Reranking pipeline
+- Chunk overlap optimization for ingestion
+- Citation formatting support
+- Retrieval confidence scoring with low-confidence fallback
+
+New services:
+- `lib/services/retrievalService.ts`
+- `lib/services/reranker.ts`
+- `lib/services/citationFormatter.ts`
+
+Chat now returns:
+- grounded answer
+- citations
+- confidence score
+- low-confidence fallback when evidence is weak
 ## Phase 6: Dynamic Assessment Engine
 
 Added:
