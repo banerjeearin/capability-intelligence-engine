@@ -226,7 +226,7 @@ Run migrations after pulling:
 ```bash
 supabase db push
 ```
-## Implement observability and AI tracing.
+## Phase 12 : Implement observability and AI tracing.
 
 Goals:
 - trace AI workflows
