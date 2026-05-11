@@ -370,3 +370,47 @@ Added:
 - Results page at `/assessment/results/[assessmentId]` with per-dimension and overall score
 - AI features are intentionally not implemented in Phase 1.
 - Supabase client is initialized in `lib/supabase.ts` and validates required environment variables.
+
+## README Update (May 11, 2026)
+
+This README has been refreshed to make setup and operations clearer.
+
+### Complete Environment Variables
+
+Create `.env.local` from `.env.example` and set the following:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY`
+
+### Recommended Local Dev Workflow
+
+1. Install dependencies
+   ```bash
+   npm install
+   ```
+2. Start Supabase (if running local stack)
+   ```bash
+   supabase start
+   ```
+3. Apply database migrations
+   ```bash
+   supabase db push
+   ```
+4. Run Next.js app
+   ```bash
+   npm run dev
+   ```
+5. (Optional) Run eval suite before shipping prompt/retrieval changes
+   ```bash
+   npm run evals
+   ```
+
+### Production Readiness Checklist
+
+- Verify all required env vars are set in deployment.
+- Confirm `documents` storage bucket exists in Supabase.
+- Run latest migrations before deploying API changes.
+- Validate RAG chat returns citations and confidence metadata.
+- Generate at least one report via `/reports` to verify end-to-end health.
