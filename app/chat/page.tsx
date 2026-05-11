@@ -1,0 +1,105 @@
+'use client';
+
+import { FormEvent, useState } from 'react';
+import { PageShell } from '@/components/layout/page-shell';
+import { Button } from '@/components/ui/button';
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: string[];
+  confidence?: number;
+}
+
+export default function ChatPage() {
+  const [userId, setUserId] = useState('');
+  const [question, setQuestion] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!userId || !question.trim()) {
+      setError('Please enter both user ID and a question.');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+    const userMessage: ChatMessage = { role: 'user', content: question.trim() };
+    setMessages((prev) => [...prev, userMessage]);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, message: question, conversationId: conversationId || undefined })
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Chat request failed.');
+      }
+
+      if (payload.conversationId) setConversationId(payload.conversationId);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: payload.answer,
+          citations: payload.citations,
+          confidence: payload.confidence
+        }
+      ]);
+    } catch (chatError) {
+      setError(chatError instanceof Error ? chatError.message : 'Unexpected chat error.');
+    } finally {
+      setIsLoading(false);
+      setQuestion('');
+    }
+  }
+
+  return (
+    <PageShell title="Chat Over Evidence">
+      <form onSubmit={onSubmit} className="mb-6 grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
+        {conversationId ? <p className="text-xs text-slate-500">Conversation: {conversationId}</p> : null}
+        <input
+          className="rounded-md border border-slate-300 px-3 py-2"
+          placeholder="User ID"
+          value={userId}
+          onChange={(event) => setUserId(event.target.value)}
+        />
+        <textarea
+          className="min-h-24 rounded-md border border-slate-300 px-3 py-2"
+          placeholder="Ask a question about uploaded evidence..."
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+        />
+        <Button type="submit" disabled={isLoading}>{isLoading ? 'Thinking...' : 'Ask'}</Button>
+      </form>
+
+      {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+
+      <div className="space-y-3">
+        {messages.map((message, index) => (
+          <div key={`${message.role}-${index}`} className="rounded-md border border-slate-200 bg-white p-4">
+            <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">{message.role}</p>
+            <p className="whitespace-pre-wrap text-sm text-slate-800">{message.content}</p>
+            {message.role === 'assistant' ? (
+              <>
+                <p className="mt-2 text-xs text-slate-500">Confidence: {((message.confidence ?? 0) * 100).toFixed(1)}%</p>
+                <ul className="mt-1 list-disc pl-5 text-xs text-slate-600">
+                  {(message.citations ?? []).map((citation) => (
+                    <li key={citation}>{citation}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </PageShell>
+  );
+}

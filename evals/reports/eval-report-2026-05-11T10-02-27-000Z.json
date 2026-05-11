@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-05-11T10:02:26.999Z",
+  "summary": {
+    "retrieval_precision": 1,
+    "grounding_score": 0.3333333333333333,
+    "answer_consistency": 0.8,
+    "hallucination_rate": 0,
+    "total_tests": 4
+  },
+  "results": [
+    {
+      "id": "ret-001",
+      "metric": "retrieval_precision",
+      "score": 1
+    },
+    {
+      "id": "hall-001",
+      "metric": "hallucination_detected",
+      "value": false,
+      "grounding_score": 0.3333333333333333
+    },
+    {
+      "id": "cons-001",
+      "metric": "answer_consistency",
+      "score": 0.8
+    },
+    {
+      "id": "prompt-001",
+      "metric": "prompt_regression_pass",
+      "score": 1
+    }
+  ]
+}
