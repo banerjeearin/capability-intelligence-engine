@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { PageShell } from '@/components/layout/page-shell';
 import { DocumentRecord } from '@/types/document';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export default function DashboardPage() {
   const [userId, setUserId] = useState('');
   const [orgId, setOrgId] = useState('');
@@ -15,6 +17,13 @@ export default function DashboardPage() {
     async function loadDocuments() {
       if (!userId || !orgId) {
         setDocuments([]);
+        setError('');
+        return;
+      }
+
+      if (!UUID_PATTERN.test(userId) || !UUID_PATTERN.test(orgId)) {
+        setDocuments([]);
+        setError('');
         return;
       }
 
@@ -66,7 +75,7 @@ export default function DashboardPage() {
       </div>
 
       {isLoading ? <p className="text-slate-600">Loading documents...</p> : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mb-3 text-sm font-medium text-red-700">{error}</p> : null}
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="min-w-full text-left text-sm">

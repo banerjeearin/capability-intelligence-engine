@@ -6,7 +6,7 @@ export default function LandingPage() {
   return (
     <PageShell title="AI Enterprise Transformation Fit Engine">
       <section className="panel mb-6 p-8">
-        <p className="max-w-3xl text-lg text-slate-200">
+        <p className="max-w-3xl text-lg leading-8 text-slate-700">
           Executive-grade intelligence terminal for evaluating transformation leadership fit across strategy, architecture, AI capability,
           and delivery execution.
         </p>
