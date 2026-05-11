@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { assessmentQuestions, AssessmentDimension } from '@/lib/assessment/questions';
 import { loadPrompt } from '@/lib/prompts/promptLoader';
 import { composePrompt } from '@/lib/prompts/promptComposer';
+import {
+  inferStrategicFit,
+  loadCapabilityGraph,
+  mapAnswersToSeedNodes,
+  scoreCapabilityAdjacency,
+  traverseCapabilities
+} from '@/lib/services/capabilityGraphService';
 
 interface AnswerInput {
   questionId: string;
@@ -37,6 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { supabaseUrl, serviceRoleKey, openAiKey } = getServerConfig();
+    const graph = await loadCapabilityGraph(userId);
 
     const assessmentRes = await fetch(`${supabaseUrl}/rest/v1/assessments`, {
       method: 'POST',
@@ -95,11 +103,19 @@ export async function POST(request: NextRequest) {
       const aiPayload = await aiRes.json();
       const content = aiPayload.choices?.[0]?.message?.content ?? '{}';
       const parsed = JSON.parse(content) as { score?: number; rationale?: string };
+      const baseScore = Math.max(1, Math.min(10, Number(parsed.score) || 1));
+      const seedNodes = mapAnswersToSeedNodes(answer, graph.nodes);
+      const traversed = traverseCapabilities(seedNodes, graph.edges, 2);
+      const adjacencyScore = scoreCapabilityAdjacency(seedNodes, traversed, graph.edges);
+      const graphBoost = Math.min(1.5, adjacencyScore * 0.2);
+      const score = Math.max(1, Math.min(10, Number((baseScore + graphBoost).toFixed(2))));
+      const inferences = inferStrategicFit(traversed, graph.nodes).slice(0, 3);
       const score = Math.max(1, Math.min(10, Number(parsed.score) || 1));
 
       scoreRows.push({
         dimension: question.dimension,
         score,
+        rationale: `${parsed.rationale ?? 'No rationale provided.'} Graph inference: ${inferences.join('; ') || 'none'}.`
         rationale: parsed.rationale ?? 'No rationale provided.'
       });
     }
