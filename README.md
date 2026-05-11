@@ -1,436 +1,242 @@
-# capability-intelligence-engine
-# Capability Intelligence Engine
+# AI Enterprise Transformation Fit Engine
 
-> AI-native strategic capability reasoning platform for enterprise transformation, AI leadership assessment, and evidence-driven fit evaluation.
+Phase 1 foundation is built with Next.js, TypeScript, Tailwind CSS, and shadcn/ui patterns.
+Phase 2 adds Supabase database migration foundations, including pgvector.
 
----
+## Local Setup
 
-# Overview
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Create environment file:
+   ```bash
+   cp .env.example .env.local
+   ```
+3. Fill in Supabase values in `.env.local`:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Start the app:
+   ```bash
+   npm run dev
+   ```
 
-Capability Intelligence Engine is an AI-powered platform designed to evaluate:
+## Supabase Setup (Phase 2)
 
-- Enterprise transformation capability
-- AI strategy and execution maturity
-- Enterprise architecture depth
-- Procurement and supply chain modernization expertise
-- ERP transformation readiness
-- AI-native operational thinking
-- Leadership and systems-thinking capability
+1. Create a Supabase project.
+2. Install Supabase CLI and login:
+   ```bash
+   npm install -g supabase
+   supabase login
+   ```
+3. Link your local repo to your Supabase project:
+   ```bash
+   supabase link --project-ref <your-project-ref>
+   ```
+4. Apply migrations:
+   ```bash
+   supabase db push
+   ```
 
-Unlike traditional resumes or ATS-driven evaluation systems, this platform creates:
+Migration file added:
+- `supabase/migrations/202605110001_phase2_database_foundation.sql`
 
-✅ AI-queryable expertise  
-✅ Evidence-backed capability assessment  
-✅ Dynamic strategic interviews  
-✅ Multi-dimensional fit scoring  
-✅ Retrieval-augmented reasoning  
-✅ Executive intelligence reports  
+This migration creates:
+- `profiles`
+- `documents`
+- `document_chunks` (with `embedding vector(1536)`)
+- `assessments`
+- `assessment_scores`
+- `reports`
+- `conversations`
+- `conversation_messages`
 
----
+It also enables `pgvector` and adds indexes for:
+- `user_id`
+- `document_id`
+- `assessment_id`
+- vector similarity search on `document_chunks.embedding`
 
-# Vision
+## Routes
 
-The future of enterprise capability assessment is:
+- `/` Landing page
+- `/dashboard` Dashboard
+- `/upload` Upload workspace
+- `/assessment` Assessment workspace
+- `/chat` Chat workspace placeholder
+- `/reports` Reports workspace
 
-- conversational,
-- evidence-driven,
-- AI-native,
-- dynamically queryable,
-- strategically reasoned.
+## Notes
 
-Capability Intelligence Engine transforms static experience into:
+- AI features are intentionally not implemented yet.
 
-> Machine-queryable strategic intelligence.
 
----
+## Phase 3: Document Upload
 
-# Core Features
+- Upload page supports PDF, DOCX, TXT, and Markdown file selection.
+- Server route `POST /api/upload` uploads files to Supabase Storage bucket `documents` and inserts metadata into `documents` table.
+- Dashboard fetches uploaded documents via `GET /api/documents?userId=<uuid>` and displays status/metadata.
+- Required server env var: `SUPABASE_SERVICE_ROLE_KEY`.
 
-## 1. AI Assessment Engine
 
-Dynamic strategic assessments evaluating:
+## Phase 4: RAG Ingestion
 
-- Strategic thinking
-- Enterprise architecture
-- AI capability
-- Execution maturity
-- Systems thinking
-- Leadership capability
+Added backend document processing route:
+- `POST /api/process-document` with payload `{ userId, documentId }`
 
----
+Processing flow:
+1. Loads document metadata from `documents` table
+2. Downloads uploaded file from Supabase Storage
+3. Extracts text (`lib/services/textExtractor.ts`)
+4. Chunks text (`lib/services/chunker.ts`)
+5. Generates embeddings via OpenAI (`lib/services/embeddingService.ts`)
+6. Stores chunks + embeddings in `document_chunks` (`lib/services/documentIngestionService.ts`)
 
-## 2. Evidence Intelligence
+Environment variables required for ingestion:
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY`
 
-Upload and analyze:
 
-- PDFs
-- Architecture diagrams
-- Strategy decks
-- Workflow documents
-- Technical specifications
-- Business transformation artifacts
+## Phase 5: AI Chat Over Evidence
 
----
+Added:
+- Chat UI on `/chat` with streaming assistant responses
+- `POST /api/chat` route
+- Vector search via Supabase RPC `match_document_chunks`
+- Evidence-grounded prompt policy (assistant should state when evidence is insufficient)
 
-## 3. RAG-Based Knowledge Engine
+Additional migration:
+- `supabase/migrations/202605110002_phase5_match_chunks_function.sql`
 
-The platform uses Retrieval-Augmented Generation (RAG) to:
-
-- retrieve contextual evidence,
-- reason over uploaded knowledge,
-- generate grounded assessments,
-- avoid hallucinations.
-
----
-
-## 4. Capability Graph
-
-Structured intelligence model connecting:
-
-```text
-User
- ├── Skills
- ├── Projects
- ├── Outcomes
- ├── Industries
- ├── AI Capabilities
- ├── Architecture Patterns
- └── Leadership Attributes
-```
-
----
-
-## 5. Fit Scoring Engine
-
-Multi-dimensional scoring across:
-
-| Dimension | Weight |
-|---|---|
-| Strategic Thinking | 20% |
-| Enterprise Architecture | 20% |
-| AI Capability | 20% |
-| Execution Maturity | 15% |
-| Leadership | 10% |
-| Systems Thinking | 15% |
-
----
-
-## 6. Executive Intelligence Reports
-
-Generate:
-
-- capability reports,
-- strategic fit analysis,
-- risk assessment,
-- evidence-backed recommendations,
-- transformation readiness insights.
-
----
-
-# Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js |
-| Language | TypeScript |
-| Styling | Tailwind CSS |
-| Components | shadcn/ui |
-| Backend | Next.js API Routes |
-| Database | PostgreSQL |
-| Vector Database | pgvector |
-| Auth | Supabase |
-| Storage | Supabase Storage |
-| AI Models | OpenAI |
-| Embeddings | text-embedding-3-large |
-| Hosting | Vercel |
-| Analytics | PostHog |
-| Monitoring | Sentry |
-| Workflow | LangGraph / CrewAI |
-
----
-
-# Architecture
-
-```text
-Frontend (Next.js)
-        ↓
-API Layer
-        ↓
-AI Orchestration Engine
-        ↓
-Assessment Engine
-        ↓
-Retrieval Layer (RAG)
-        ↓
-pgvector + PostgreSQL
-        ↓
-Document Storage
-```
-
----
-
-# Repository Structure
-
-```text
-capability-intelligence-engine/
-│
-├── frontend/
-├── backend/
-├── packages/
-├── docs/
-├── infrastructure/
-├── agents/
-├── prompts/
-├── database/
-├── scripts/
-│
-├── AGENTS.md
-├── PROJECT_BRIEF.md
-├── TASKS.md
-├── README.md
-├── docker-compose.yml
-└── .env.example
-```
-
----
-
-# Main Product Modules
-
-| Module | Purpose |
-|---|---|
-| Assessment Engine | Dynamic evaluation |
-| RAG Engine | Knowledge retrieval |
-| Evidence Explorer | Proof validation |
-| AI Chat | Strategic conversation |
-| Fit Scoring | Capability analysis |
-| Report Generator | Executive reports |
-| Capability Graph | Relationship reasoning |
-
----
-
-# Product Workflow
-
-```text
-Document Upload
-      ↓
-Knowledge Extraction
-      ↓
-Embedding Generation
-      ↓
-Vector Storage
-      ↓
-Semantic Retrieval
-      ↓
-AI Reasoning
-      ↓
-Assessment Scoring
-      ↓
-Executive Report
-```
-
----
-
-# Getting Started
-
-# 1. Clone Repository
-
+Run migrations again after pulling latest changes:
 ```bash
-git clone https://github.com/YOUR_USERNAME/capability-intelligence-engine.git
-cd capability-intelligence-engine
+supabase db push
 ```
 
----
 
-# 2. Install Dependencies
+## Phase 6: Dynamic Assessment Engine
 
+Added:
+- Dynamic assessment flow on `/assessment` covering:
+  - Strategic thinking
+  - Enterprise architecture
+  - AI capability
+  - Execution maturity
+  - Leadership
+  - Systems thinking
+- Answer capture and submission to `POST /api/assessment/score`
+- AI scoring using OpenAI
+- Score persistence into `assessments` and `assessment_scores` tables
+- Results page at `/assessment/results/[assessmentId]` with per-dimension and overall score
+
+
+## Phase 7: Fit Report Generation
+
+Added report generation and display on `/reports`:
+- Executive summary
+- Capability scores
+- Evidence-backed strengths
+- Risk areas
+- Recommended role fit
+- Final recommendation
+
+API routes:
+- `POST /api/reports/generate`
+- `GET /api/reports?userId=<uuid>`
+- `GET /api/reports/[reportId]/export` (PDF download endpoint)
+
+Reports are stored in `reports` table (`report_json`).
+
+
+## Retrieval Quality Optimization
+
+Implemented retrieval-quality upgrades for RAG chat:
+- Hybrid retrieval (semantic + keyword)
+- Metadata filtering support (`documentId`)
+- Reranking pipeline
+- Chunk overlap optimization for ingestion
+- Citation formatting support
+- Retrieval confidence scoring with low-confidence fallback
+
+New services:
+- `lib/services/retrievalService.ts`
+- `lib/services/reranker.ts`
+- `lib/services/citationFormatter.ts`
+
+Chat now returns:
+- grounded answer
+- citations
+- confidence score
+- low-confidence fallback when evidence is weak
+
+
+## AI Evaluation Framework
+
+Evaluation assets are in `evals/`:
+- `datasets/golden_tests.json` (golden test dataset)
+- `scoringMetrics.mjs` (retrieval precision, grounding score, answer consistency, hallucination rate)
+- `run-evals.mjs` (evaluation runner)
+- `reports/*.json` (generated evaluation reports)
+
+Run locally:
 ```bash
-npm install
+npm run evals
 ```
 
----
+This enables prompt regression benchmarking and local quality checks before prompt/retrieval changes ship.
 
-# 3. Setup Environment Variables
 
-Create:
+## Prompt Orchestration Framework
 
+Prompts are now externalized and versioned under `prompts/`:
+- `prompts/system/`
+- `prompts/assessment/`
+- `prompts/chat/`
+- `prompts/scoring/`
+- `prompts/reporting/`
+
+Core orchestration modules:
+- `lib/prompts/promptLoader.ts` (versioned prompt loading)
+- `lib/prompts/promptComposer.ts` (dynamic variable injection)
+- `lib/prompts/contextInjector.ts` (context block composition)
+
+Chat, assessment scoring, and report generation now consume shared prompt orchestration so prompt updates can ship independently of business logic.
+
+
+## Conversation Memory System
+
+Implemented memory-backed chat continuity with short-term + long-term memory:
+- `lib/services/memoryService.ts`
+  - short-term memory retrieval from `conversation_messages`
+  - long-term strategic memory retrieval from `conversation_memories` using vector similarity
+  - conversation summarization pipeline
+  - strategic memory persistence with embeddings
+- Chat route now persists and reuses `conversationId` context across sessions.
+
+Database additions:
+- `supabase/migrations/202605110003_conversation_memory.sql`
+  - `conversation_memories` table
+  - `match_conversation_memories` RPC
+  - vector index for memory embeddings
+
+Run migrations after pulling:
 ```bash
-.env.local
+supabase db push
 ```
 
-Example:
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+## Observability and AI Tracing
 
-OPENAI_API_KEY=
+Implemented tracing and observability for AI workflows:
+- Lightweight OpenTelemetry bootstrap hook via `instrumentation.ts` + `lib/observability/otel.ts`
+- Structured tracing utilities in `lib/observability/tracing.ts`
+- Request/phase spans for chat and retrieval pipeline
+- Retrieval metrics logs (semantic candidates, keyword candidates, final results, confidence)
+- Token usage capture from OpenAI responses (`usage`)
+- Latency tracking via span duration logs
+- LangSmith-compatible tracing headers (`x-langsmith-trace-id`, `x-langsmith-span-id`)
 
-DATABASE_URL=
-
-POSTHOG_KEY=
-SENTRY_DSN=
-```
-
----
-
-# 4. Run Development Server
-
-```bash
-npm run dev
-```
-
----
-
-# 5. Open Application
-
-```text
-http://localhost:3000
-```
-
----
-
-# Database Design
-
-# Core Tables
-
-| Table | Purpose |
-|---|---|
-| users | User profiles |
-| documents | Uploaded evidence |
-| document_chunks | Embedded chunks |
-| assessments | Assessment sessions |
-| assessment_scores | Capability scores |
-| reports | Generated reports |
-| conversations | AI conversations |
-
----
-
-# RAG Pipeline
-
-```text
-Upload
-  ↓
-OCR
-  ↓
-Chunking
-  ↓
-Embeddings
-  ↓
-Vector Storage
-  ↓
-Semantic Retrieval
-  ↓
-AI Reasoning
-```
-
----
-
-# AI System Design
-
-# AI Layers
-
-| Layer | Purpose |
-|---|---|
-| Retrieval Layer | Context grounding |
-| Reasoning Layer | Strategic analysis |
-| Scoring Layer | Capability evaluation |
-| Reporting Layer | Executive insights |
-| Memory Layer | Conversation continuity |
-
----
-
-# Assessment Categories
-
-The system evaluates:
-
-- Enterprise transformation maturity
-- AI-native thinking
-- Systems architecture depth
-- Procurement transformation capability
-- ERP modernization capability
-- Leadership maturity
-- Strategic execution ability
-
----
-
-# Security
-
-Enterprise-grade security practices include:
-
-- Row-level security
-- Secure storage
-- Environment variable isolation
-- Encrypted communication
-- Audit logging
-- Access control
-
----
-
-# Planned Features
-
-## Phase 1 — MVP
-
-- Authentication
-- Document upload
-- RAG pipeline
-- AI chat
-- Assessment engine
-
----
-
-## Phase 2 — Intelligence Layer
-
-- Capability graph
-- Evidence explorer
-- Advanced fit scoring
-- AI memory
-- Dynamic assessment reasoning
-
----
-
-## Phase 3 — Enterprise Platform
-
-- Multi-tenant organizations
-- Benchmarking engine
-- Enterprise dashboards
-- Transformation advisory AI
-- Industry-specific assessment packs
-
----
-
-# Long-Term Vision
-
-Capability Intelligence Engine aims to become:
-
-> The operating system for enterprise capability reasoning and AI-native transformation assessment.
-
----
-
-# Contributors
-
-## Founder & Vision
-
-Arindam Banerjee
-
-Enterprise Architect | AI Transformation Strategist | Procurement & ERP Modernization Specialist
-
----
-
-# License
-
-This project is currently private and proprietary.
-
----
-
-# Final Philosophy
-
-Do not build:
-- a chatbot,
-- a resume system,
-- a static portfolio.
-
-Build:
-> A strategic capability reasoning engine.
-
----
+Outcome:
+- every AI request is traceable
+- retrieval pipeline is observable
+- token usage + latency metrics are visible in logs

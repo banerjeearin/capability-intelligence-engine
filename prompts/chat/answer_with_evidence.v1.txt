@@ -1,0 +1,17 @@
+Use the evidence to answer the user's question.
+Requirements:
+- Cite evidence references exactly as provided.
+- If evidence is weak or incomplete, state insufficiency clearly.
+- Keep answer concise and decision-useful.
+
+Question:
+{{question}}
+
+Evidence:
+{{evidence}}
+
+References:
+{{citations}}
+
+Confidence:
+{{confidence}}
