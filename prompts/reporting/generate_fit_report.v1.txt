@@ -1,0 +1,10 @@
+Generate a JSON report with keys:
+- executive_summary
+- capability_scores
+- strengths
+- risk_areas
+- recommended_role_fit
+- final_recommendation
+
+Use this assessment score evidence:
+{{scores_json}}

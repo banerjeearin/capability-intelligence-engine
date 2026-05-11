@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { assessmentQuestions, AssessmentDimension } from '@/lib/assessment/questions';
+import { loadPrompt } from '@/lib/prompts/promptLoader';
+import { composePrompt } from '@/lib/prompts/promptComposer';
 
 interface AnswerInput {
   questionId: string;
@@ -62,6 +64,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Missing answer for ${question.id}` }, { status: 400 });
       }
 
+      const scoringTemplate = loadPrompt('scoring', 'score_answer', 'v1');
+      const prompt = composePrompt(scoringTemplate, {
+        dimension: question.dimension,
+        question: question.prompt,
+        answer
+      });
       const prompt = `Score this answer from 1 to 10 for dimension ${question.dimension}. Return JSON: {"score": number, "rationale": string}.\nQuestion: ${question.prompt}\nAnswer: ${answer}`;
       const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',

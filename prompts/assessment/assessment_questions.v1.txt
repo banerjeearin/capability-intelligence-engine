@@ -1,0 +1,7 @@
+Assess candidate capability across these dimensions:
+- strategic_thinking
+- enterprise_architecture
+- ai_capability
+- execution_maturity
+- leadership
+- systems_thinking

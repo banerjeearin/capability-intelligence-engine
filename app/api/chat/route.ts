@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { retrieveEvidence } from '@/lib/services/retrievalService';
 import { formatCitations } from '@/lib/services/citationFormatter';
+import { loadPrompt } from '@/lib/prompts/promptLoader';
+import { composePrompt } from '@/lib/prompts/promptComposer';
+import { injectContext } from '@/lib/prompts/contextInjector';
+import {
+  appendConversationMessage,
+  createConversation,
+  getConversationMemoryContext,
+  summarizeConversation,
+  upsertStrategicMemory
+} from '@/lib/services/memoryService';
 
 function getServerConfig() {
   const openAiKey = process.env.OPENAI_API_KEY;
@@ -27,6 +37,7 @@ function getServerConfig() {
 
 export async function POST(request: NextRequest) {
   try {
+    const body = (await request.json()) as { userId?: string; message?: string; topK?: number; documentId?: string; conversationId?: string };
     const body = (await request.json()) as { userId?: string; message?: string; topK?: number; documentId?: string };
     const body = (await request.json()) as { userId?: string; message?: string; topK?: number };
     const userId = body.userId?.trim();
@@ -38,6 +49,11 @@ export async function POST(request: NextRequest) {
     }
 
     const { openAiKey } = getServerConfig();
+    const conversationId = body.conversationId?.trim() || (await createConversation(userId));
+
+    await appendConversationMessage(conversationId, userId, 'user', message);
+
+    const memoryContext = await getConversationMemoryContext(conversationId, userId, message);
     const retrieval = await retrieveEvidence(userId, message, { documentId: body.documentId?.trim() }, topK);
     const citations = formatCitations(retrieval.results);
 
@@ -54,6 +70,30 @@ export async function POST(request: NextRequest) {
       .map((item, idx) => `[Evidence ${idx + 1}] ${item.content}`)
       .join('\n\n');
 
+    const baseSystem = loadPrompt('system', 'base', 'v1');
+    const chatTemplate = loadPrompt('chat', 'answer_with_evidence', 'v1');
+    const userComposed = composePrompt(chatTemplate, {
+      question: message,
+      evidence: evidenceText,
+      citations: citations.join('\n'),
+      confidence: retrieval.confidence.toFixed(3)
+    });
+    const shortTerm = memoryContext.shortTermMessages
+      .slice()
+      .reverse()
+      .map((m) => `${m.role}: ${m.message}`)
+      .join('\n');
+    const longTerm = memoryContext.longTermMemories
+      .map((m) => `[${m.memory_type}|${Number(m.similarity).toFixed(2)}] ${m.content}`)
+      .join('\n');
+
+    const finalSystem = injectContext(baseSystem, [
+      { title: 'Mode', content: 'Evidence-grounded answering' },
+      { title: 'Short-term memory', content: shortTerm },
+      { title: 'Long-term strategic memory', content: longTerm }
+    ]);
+
+    const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       return new Response(JSON.stringify({ error: 'userId and message are required.' }), { status: 400 });
     }
@@ -105,6 +145,8 @@ export async function POST(request: NextRequest) {
         model: 'gpt-4.1-mini',
         temperature: 0.1,
         messages: [
+          { role: 'system', content: finalSystem },
+          { role: 'user', content: userComposed }
           {
             role: 'system',
             content:
@@ -125,10 +167,17 @@ export async function POST(request: NextRequest) {
     const aiPayload = await aiRes.json();
     const answer = aiPayload.choices?.[0]?.message?.content ?? 'No response generated.';
 
+    await appendConversationMessage(conversationId, userId, 'assistant', answer);
+
+    const summary = await summarizeConversation(conversationId, userId);
+    await upsertStrategicMemory(conversationId, userId, summary, 'summary');
+
     return NextResponse.json({
       answer,
       citations,
       confidence: retrieval.confidence,
+      lowConfidence: false,
+      conversationId
       lowConfidence: false
     });
   } catch (error) {

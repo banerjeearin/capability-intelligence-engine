@@ -33,6 +33,7 @@ export default function ChatPage() {
   const [userId, setUserId] = useState('');
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -53,6 +54,7 @@ export default function ChatPage() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, message: question, conversationId: conversationId || undefined })
         body: JSON.stringify({ userId, message: question })
       });
 
@@ -61,6 +63,7 @@ export default function ChatPage() {
         throw new Error(payload.error ?? 'Chat request failed.');
       }
 
+      if (payload.conversationId) setConversationId(payload.conversationId);
       setMessages((prev) => [
         ...prev,
         {
@@ -106,6 +109,7 @@ export default function ChatPage() {
   return (
     <PageShell title="Chat Over Evidence">
       <form onSubmit={onSubmit} className="mb-6 grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
+        {conversationId ? <p className="text-xs text-slate-500">Conversation: {conversationId}</p> : null}
         <input
           className="rounded-md border border-slate-300 px-3 py-2"
           placeholder="User ID"
