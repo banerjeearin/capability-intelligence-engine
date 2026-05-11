@@ -8,7 +8,6 @@
     "start": "next start",
     "lint": "next lint",
     "evals": "node evals/run-evals.mjs"
-    "lint": "next lint"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
