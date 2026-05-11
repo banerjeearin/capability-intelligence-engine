@@ -1,7 +1,6 @@
-import { langsmithHeaders, startSpan, startTrace, endSpan } from '@/lib/observability/tracing';
+import { langsmithHeaders, startSpan, startTrace, endSpan, SpanContext } from '@/lib/observability/tracing';
 
 export async function generateEmbeddings(texts: string[], parentTraceId?: string): Promise<number[][]> {
-export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY is required for embeddings.');
@@ -9,7 +8,9 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
 
   if (!texts.length) return [];
 
-  const trace = parentTraceId ? { traceId: parentTraceId, spanId: 'parent', name: 'external', startTime: Date.now(), attributes: {} } as any : startTrace('embedding_request', { inputs: texts.length });
+  const trace: SpanContext = parentTraceId
+    ? { traceId: parentTraceId, spanId: 'parent', name: 'external', startTime: Date.now(), attributes: {} }
+    : startTrace('embedding_request', { inputs: texts.length });
   const span = startSpan(trace, 'openai_embeddings', { model: 'text-embedding-3-small', input_count: texts.length });
 
   const response = await fetch('https://api.openai.com/v1/embeddings', {
@@ -18,7 +19,6 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       ...langsmithHeaders(span)
-      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       model: 'text-embedding-3-small',
@@ -32,11 +32,10 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
     throw new Error(`OpenAI embeddings request failed: ${details}`);
   }
 
-  const payload = (await response.json()) as { data: Array<{ embedding: number[] }>; usage?: { prompt_tokens?: number; total_tokens?: number } };
+  const payload = (await response.json()) as {
+    data: Array<{ embedding: number[] }>;
+    usage?: { prompt_tokens?: number; total_tokens?: number };
+  };
   endSpan(span, { ok: true, usage: payload.usage ?? null });
-    throw new Error(`OpenAI embeddings request failed: ${details}`);
-  }
-
-  const payload = (await response.json()) as { data: Array<{ embedding: number[] }> };
   return payload.data.map((item) => item.embedding);
 }

@@ -36,8 +36,6 @@ export async function POST(request: NextRequest) {
 
     if (!userId || userId !== authUserId) {
       return NextResponse.json({ error: 'userId must match authenticated user.' }, { status: 400 });
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required.' }, { status: 400 });
     }
 
     if (!ALLOWED_TYPES.has(file.type)) {
@@ -52,7 +50,6 @@ export async function POST(request: NextRequest) {
     const bucket = 'documents';
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `${userId}/${Date.now()}-${safeName}`;
-
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
     const storageResponse = await fetch(`${url}/storage/v1/object/${bucket}/${filePath}`, {
@@ -81,12 +78,11 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         user_id: userId,
+        organization_id: organizationId,
         file_name: file.name,
         file_path: filePath,
         mime_type: file.type,
         file_size_bytes: file.size,
-        status: 'uploaded',
-        organization_id: organizationId
         status: 'uploaded'
       })
     });

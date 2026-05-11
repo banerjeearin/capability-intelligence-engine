@@ -9,17 +9,18 @@ const ACCEPTED_EXTENSIONS = '.pdf,.docx,.txt,.md,.markdown';
 
 export default function UploadPage() {
   const [userId, setUserId] = useState('');
+  const [orgId, setOrgId] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<UploadStatus>('idle');
   const [message, setMessage] = useState('');
 
-  const isSubmitDisabled = useMemo(() => !file || !userId || status === 'uploading', [file, userId, status]);
+  const isSubmitDisabled = useMemo(() => !file || !userId || !orgId || status === 'uploading', [file, userId, orgId, status]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file || !userId) {
+    if (!file || !userId || !orgId) {
       setStatus('error');
-      setMessage('Please provide both a user ID and a valid file.');
+      setMessage('Please provide user ID, organization ID, and a valid file.');
       return;
     }
 
@@ -33,6 +34,10 @@ export default function UploadPage() {
 
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          'x-user-id': userId,
+          'x-org-id': orgId
+        },
         body: formData
       });
 
@@ -64,6 +69,15 @@ export default function UploadPage() {
           />
         </label>
         <label className="block">
+          <span className="mb-2 block text-sm font-medium">Organization ID</span>
+          <input
+            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            placeholder="Organization UUID"
+            value={orgId}
+            onChange={(event) => setOrgId(event.target.value)}
+          />
+        </label>
+        <label className="block">
           <span className="mb-2 block text-sm font-medium">Select file</span>
           <input
             className="w-full rounded-md border border-slate-300 px-3 py-2"
@@ -81,12 +95,6 @@ export default function UploadPage() {
           </p>
         ) : null}
       </form>
-import { PageShell } from '@/components/layout/page-shell';
-
-export default function UploadPage() {
-  return (
-    <PageShell title="Upload Documents">
-      <p className="text-slate-600">Upload resumes, project evidence, and supporting enterprise artifacts.</p>
     </PageShell>
   );
 }

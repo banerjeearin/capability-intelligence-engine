@@ -5,6 +5,7 @@ export interface RetrievalCandidate {
   content: string;
   semantic_score: number;
   keyword_score: number;
+  combinedScore?: number;
   metadata?: Record<string, unknown>;
 }
 
@@ -26,5 +27,5 @@ export function rerankCandidates(query: string, candidates: RetrievalCandidate[]
       const combinedScore = candidate.semantic_score * 0.6 + candidate.keyword_score * 0.2 + lexicalScore * 0.2;
       return { ...candidate, combinedScore };
     })
-    .sort((a, b) => (b as any).combinedScore - (a as any).combinedScore);
+    .sort((a, b) => (b.combinedScore ?? 0) - (a.combinedScore ?? 0));
 }

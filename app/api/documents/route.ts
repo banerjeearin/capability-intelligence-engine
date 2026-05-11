@@ -18,21 +18,15 @@ export async function GET(request: NextRequest) {
     await requireOrgRole(authUserId, organizationId, ['admin', 'reviewer', 'member']);
 
     const userId = request.nextUrl.searchParams.get('userId')?.trim();
-
     if (!userId || userId !== authUserId) {
       return NextResponse.json({ error: 'userId query param must match authenticated user.' }, { status: 400 });
-    const userId = request.nextUrl.searchParams.get('userId')?.trim();
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId query param is required.' }, { status: 400 });
     }
 
     const { url, serviceRoleKey } = getSupabaseServerConfig();
     const query = new URLSearchParams({
       user_id: `eq.${userId}`,
+      organization_id: `eq.${organizationId}`,
       select: 'id,file_name,file_path,mime_type,file_size_bytes,status,created_at',
-      order: 'created_at.desc',
-      organization_id: `eq.${organizationId}`
       order: 'created_at.desc'
     });
 

@@ -7,10 +7,10 @@ function getConfig() {
   return { url, key };
 }
 
-export async function GET(_: NextRequest, { params }: { params: { reportId: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ reportId: string }> }) {
   try {
     const { url, key } = getConfig();
-    const reportId = params.reportId;
+    const { reportId } = await params;
 
     const query = new URLSearchParams({ id: `eq.${reportId}`, select: 'title,report_json', limit: '1' });
     const response = await fetch(`${url}/rest/v1/reports?${query.toString()}`, {

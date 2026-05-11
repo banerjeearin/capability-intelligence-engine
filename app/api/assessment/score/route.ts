@@ -18,6 +18,12 @@ interface AnswerInput {
   answer: string;
 }
 
+interface AgentScore {
+  dimension?: string;
+  score?: number;
+  rationale?: string;
+}
+
 function getServerConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -28,6 +34,39 @@ function getServerConfig() {
   }
 
   return { supabaseUrl, serviceRoleKey, openAiKey };
+}
+
+async function scoreWithModel(openAiKey: string, dimension: AssessmentDimension, question: string, answer: string) {
+  const scoringTemplate = loadPrompt('scoring', 'score_answer', 'v1');
+  const prompt = composePrompt(scoringTemplate, { dimension, question, answer });
+  const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${openAiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4.1-mini',
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You are an enterprise AI transformation assessor.' },
+        { role: 'user', content: prompt }
+      ]
+    })
+  });
+
+  if (!aiRes.ok) {
+    throw new Error(`AI scoring failed: ${await aiRes.text()}`);
+  }
+
+  const aiPayload = await aiRes.json();
+  const content = aiPayload.choices?.[0]?.message?.content ?? '{}';
+  const parsed = JSON.parse(content) as { score?: number; rationale?: string };
+  return {
+    score: Math.max(1, Math.min(10, Number(parsed.score) || 1)),
+    rationale: parsed.rationale ?? 'No rationale provided.'
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -46,13 +85,11 @@ export async function POST(request: NextRequest) {
     const answers = body.answers ?? [];
 
     if (!userId || userId !== authUserId || answers.length !== assessmentQuestions.length) {
-    if (!userId || answers.length !== assessmentQuestions.length) {
       return NextResponse.json({ error: 'userId and all assessment answers are required.' }, { status: 400 });
     }
 
     const { supabaseUrl, serviceRoleKey, openAiKey } = getServerConfig();
     const graph = await loadCapabilityGraph(userId);
-
     const orchestrator = new OrchestrationManager(buildAssessmentAgents());
     const agentInput = {
       userId,
@@ -74,7 +111,6 @@ export async function POST(request: NextRequest) {
         Prefer: 'return=representation'
       },
       body: JSON.stringify({ user_id: userId, organization_id: organizationId, title, status: 'completed' })
-      body: JSON.stringify({ user_id: userId, title, status: 'completed' })
     });
 
     if (!assessmentRes.ok) {
@@ -82,12 +118,13 @@ export async function POST(request: NextRequest) {
     }
 
     const [assessment] = await assessmentRes.json();
-
     const answerMap = new Map(answers.map((a) => [a.questionId, a.answer.trim()]));
     const scoreRows: Array<{ dimension: AssessmentDimension; score: number; rationale: string }> = [];
-    const scoringAgentOutput = (orchestration.outputs.find((o) => o.name === 'scoring_agent')?.data ?? {}) as any;
+    const scoringAgentOutput = (orchestration.outputs.find((o) => o.name === 'scoring_agent')?.data ?? {}) as {
+      scores?: AgentScore[];
+    };
     const agentScores = Array.isArray(scoringAgentOutput.scores) ? scoringAgentOutput.scores : [];
-    const agentScoreMap = new Map(agentScores.map((s: any) => [s.dimension, s]));
+    const agentScoreMap = new Map(agentScores.map((s) => [s.dimension, s]));
 
     for (const question of assessmentQuestions) {
       const answer = answerMap.get(question.id) ?? '';
@@ -95,93 +132,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Missing answer for ${question.id}` }, { status: 400 });
       }
 
-      let baseScore = 1;
-      let rationaleText = 'No rationale provided.';
       const agentScore = agentScoreMap.get(question.dimension);
+      const base = agentScore
+        ? {
+            score: Math.max(1, Math.min(10, Number(agentScore.score) || 1)),
+            rationale: agentScore.rationale ?? 'No rationale provided.'
+          }
+        : await scoreWithModel(openAiKey, question.dimension, question.prompt, answer);
 
-      if (agentScore) {
-        baseScore = Math.max(1, Math.min(10, Number(agentScore.score) || 1));
-        rationaleText = agentScore.rationale ?? rationaleText;
-      } else {
-        const scoringTemplate = loadPrompt('scoring', 'score_answer', 'v1');
-        const prompt = composePrompt(scoringTemplate, {
-          dimension: question.dimension,
-          question: question.prompt,
-          answer
-        });
-        const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${openAiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'gpt-4.1-mini',
-            temperature: 0.1,
-            response_format: { type: 'json_object' },
-            messages: [
-              { role: 'system', content: 'You are an enterprise AI transformation assessor.' },
-              { role: 'user', content: prompt }
-            ]
-          })
-        });
-
-        if (!aiRes.ok) {
-          return NextResponse.json({ error: 'AI scoring failed.', details: await aiRes.text() }, { status: 500 });
-        }
-
-        const aiPayload = await aiRes.json();
-        const content = aiPayload.choices?.[0]?.message?.content ?? '{}';
-        const parsed = JSON.parse(content) as { score?: number; rationale?: string };
-        baseScore = Math.max(1, Math.min(10, Number(parsed.score) || 1));
-        rationaleText = parsed.rationale ?? rationaleText;
-      }
-      const scoringTemplate = loadPrompt('scoring', 'score_answer', 'v1');
-      const prompt = composePrompt(scoringTemplate, {
-        dimension: question.dimension,
-        question: question.prompt,
-        answer
-      });
-      const prompt = `Score this answer from 1 to 10 for dimension ${question.dimension}. Return JSON: {"score": number, "rationale": string}.\nQuestion: ${question.prompt}\nAnswer: ${answer}`;
-      const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${openAiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-4.1-mini',
-          temperature: 0.1,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: 'You are an enterprise AI transformation assessor.' },
-            { role: 'user', content: prompt }
-          ]
-        })
-      });
-
-      if (!aiRes.ok) {
-        return NextResponse.json({ error: 'AI scoring failed.', details: await aiRes.text() }, { status: 500 });
-      }
-
-      const aiPayload = await aiRes.json();
-      const content = aiPayload.choices?.[0]?.message?.content ?? '{}';
-      const parsed = JSON.parse(content) as { score?: number; rationale?: string };
-      const baseScore = Math.max(1, Math.min(10, Number(parsed.score) || 1));
       const seedNodes = mapAnswersToSeedNodes(answer, graph.nodes);
       const traversed = traverseCapabilities(seedNodes, graph.edges, 2);
       const adjacencyScore = scoreCapabilityAdjacency(seedNodes, traversed, graph.edges);
       const graphBoost = Math.min(1.5, adjacencyScore * 0.2);
-      const score = Math.max(1, Math.min(10, Number((baseScore + graphBoost).toFixed(2))));
+      const score = Math.max(1, Math.min(10, Number((base.score + graphBoost).toFixed(2))));
       const inferences = inferStrategicFit(traversed, graph.nodes).slice(0, 3);
-      const score = Math.max(1, Math.min(10, Number(parsed.score) || 1));
 
       scoreRows.push({
         dimension: question.dimension,
         score,
-        rationale: `${rationaleText} Graph inference: ${inferences.join('; ') || 'none'}.`
-        rationale: `${parsed.rationale ?? 'No rationale provided.'} Graph inference: ${inferences.join('; ') || 'none'}.`
-        rationale: parsed.rationale ?? 'No rationale provided.'
+        rationale: `${base.rationale} Graph inference: ${inferences.join('; ') || 'none'}.`
       });
     }
 
@@ -216,7 +185,6 @@ export async function POST(request: NextRequest) {
         communication_events: orchestration.memory.messages.length
       }
     });
-    return NextResponse.json({ assessmentId: assessment.id, scores: scoreRows });
   } catch (error) {
     return NextResponse.json(
       { error: 'Assessment scoring failed.', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -224,7 +192,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 
 export async function GET(request: NextRequest) {
   try {
@@ -241,9 +208,8 @@ export async function GET(request: NextRequest) {
     const { supabaseUrl, serviceRoleKey } = getServerConfig();
     const query = new URLSearchParams({
       assessment_id: `eq.${assessmentId}`,
+      user_id: `eq.${authUserId}`,
       select: 'dimension,score,rationale',
-      order: 'dimension.asc',
-      user_id: `eq.${authUserId}`
       order: 'dimension.asc'
     });
 
