@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         question: question.prompt,
         answer
       });
+      const prompt = `Score this answer from 1 to 10 for dimension ${question.dimension}. Return JSON: {"score": number, "rationale": string}.\nQuestion: ${question.prompt}\nAnswer: ${answer}`;
       const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
