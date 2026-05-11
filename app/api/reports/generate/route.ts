@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     const reportTemplate = loadPrompt('reporting', 'generate_fit_report', 'v1');
     const prompt = composePrompt(reportTemplate, { scores_json: JSON.stringify(scores) });
+    const prompt = `Generate a JSON report with keys: executive_summary, capability_scores, strengths, risk_areas, recommended_role_fit, final_recommendation.\nScores: ${JSON.stringify(scores)}`;
     const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
