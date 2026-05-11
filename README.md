@@ -115,5 +115,21 @@ Run migrations again after pulling latest changes:
 ```bash
 supabase db push
 ```
+
+
+## Phase 6: Dynamic Assessment Engine
+
+Added:
+- Dynamic assessment flow on `/assessment` covering:
+  - Strategic thinking
+  - Enterprise architecture
+  - AI capability
+  - Execution maturity
+  - Leadership
+  - Systems thinking
+- Answer capture and submission to `POST /api/assessment/score`
+- AI scoring using OpenAI
+- Score persistence into `assessments` and `assessment_scores` tables
+- Results page at `/assessment/results/[assessmentId]` with per-dimension and overall score
 - AI features are intentionally not implemented in Phase 1.
 - Supabase client is initialized in `lib/supabase.ts` and validates required environment variables.
