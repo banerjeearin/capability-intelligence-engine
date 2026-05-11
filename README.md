@@ -72,5 +72,13 @@ It also enables `pgvector` and adds indexes for:
 ## Notes
 
 - AI features are intentionally not implemented yet.
+
+
+## Phase 3: Document Upload
+
+- Upload page supports PDF, DOCX, TXT, and Markdown file selection.
+- Server route `POST /api/upload` uploads files to Supabase Storage bucket `documents` and inserts metadata into `documents` table.
+- Dashboard fetches uploaded documents via `GET /api/documents?userId=<uuid>` and displays status/metadata.
+- Required server env var: `SUPABASE_SERVICE_ROLE_KEY`.
 - AI features are intentionally not implemented in Phase 1.
 - Supabase client is initialized in `lib/supabase.ts` and validates required environment variables.
