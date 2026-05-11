@@ -4,6 +4,9 @@ Phase 1 foundation is built with Next.js, TypeScript, Tailwind CSS, and shadcn/u
 Phase 2 adds Supabase database migration foundations, including pgvector.
 
 ## Local Setup
+Phase 1 foundation built with Next.js, TypeScript, Tailwind CSS, shadcn/ui patterns, and Supabase client setup.
+
+## Setup
 
 1. Install dependencies:
    ```bash
@@ -225,83 +228,145 @@ supabase db push
 ```
 
 
-## Observability and AI Tracing
+## Phase 6: Dynamic Assessment Engine
 
-Implemented tracing and observability for AI workflows:
-- Lightweight OpenTelemetry bootstrap hook via `instrumentation.ts` + `lib/observability/otel.ts`
-- Structured tracing utilities in `lib/observability/tracing.ts`
-- Request/phase spans for chat and retrieval pipeline
-- Retrieval metrics logs (semantic candidates, keyword candidates, final results, confidence)
-- Token usage capture from OpenAI responses (`usage`)
-- Latency tracking via span duration logs
-- LangSmith-compatible tracing headers (`x-langsmith-trace-id`, `x-langsmith-span-id`)
-
-Outcome:
-- every AI request is traceable
-- retrieval pipeline is observable
-- token usage + latency metrics are visible in logs
-
-
-## AI Guardrails and Safety Controls
-
-Implemented guardrails to reduce hallucinations and protect uploaded data:
-- `lib/services/guardrailService.ts`
-  - unsafe prompt detection
-  - sensitive data filtering (PII redaction)
-  - evidence-only fallback behavior
-  - confidence threshold suppression
-  - citation enforcement checks
-- Chat route integrates guardrails before and after model generation
-- Responses now clearly state uncertainty when evidence is insufficient
-
-Outcome:
-- unsupported claims are minimized
-- uncertainty is explicit
-- evidence grounding is enforced
+Added:
+- Dynamic assessment flow on `/assessment` covering:
+  - Strategic thinking
+  - Enterprise architecture
+  - AI capability
+  - Execution maturity
+  - Leadership
+  - Systems thinking
+- Answer capture and submission to `POST /api/assessment/score`
+- AI scoring using OpenAI
+- Score persistence into `assessments` and `assessment_scores` tables
+- Results page at `/assessment/results/[assessmentId]` with per-dimension and overall score
 
 
-## Capability Graph Engine
+## Phase 7: Fit Report Generation
 
-Implemented graph-based capability reasoning to strengthen fit scoring:
-- Graph entities modeled in DB:
-  - skills
-  - projects
-  - industries
-  - outcomes
-  - technologies
-  - leadership traits
-  - architecture patterns
-- `supabase/migrations/202605110004_capability_graph.sql`
-  - `capability_nodes`
-  - `capability_edges`
-- `lib/services/capabilityGraphService.ts`
-  - relationship traversal
-  - capability adjacency scoring
-  - strategic inference extraction
-  - seed-node mapping from answers
-- Assessment scoring now uses graph relationships to adjust and explain fit scoring.
+Added report generation and display on `/reports`:
+- Executive summary
+- Capability scores
+- Evidence-backed strengths
+- Risk areas
+- Recommended role fit
+- Final recommendation
 
-This enables reasoning across connected capabilities and advanced fit inference.
+API routes:
+- `POST /api/reports/generate`
+- `GET /api/reports?userId=<uuid>`
+- `GET /api/reports/[reportId]/export` (PDF download endpoint)
+
+Reports are stored in `reports` table (`report_json`).
 
 
-## Multi-Agent Orchestration Layer
+## Retrieval Quality Optimization
 
-Implemented modular multi-agent orchestration for assessment workflows:
-- Agents:
-  1. Retrieval Agent
-  2. Evidence Agent
-  3. Assessment Agent
-  4. Scoring Agent
-  5. Reporting Agent
+Implemented retrieval-quality upgrades for RAG chat:
+- Hybrid retrieval (semantic + keyword)
+- Metadata filtering support (`documentId`)
+- Reranking pipeline
+- Chunk overlap optimization for ingestion
+- Citation formatting support
+- Retrieval confidence scoring with low-confidence fallback
 
-Core modules:
-- `lib/agents/orchestrationManager.ts` (task routing + execution pipeline)
-- `lib/agents/types.ts` (shared memory + agent message contracts)
-- `lib/agents/assessmentAgents.ts` (specialized agent implementations)
+New services:
+- `lib/services/retrievalService.ts`
+- `lib/services/reranker.ts`
+- `lib/services/citationFormatter.ts`
 
-Capabilities:
-- shared memory context across agents
-- agent communication event log
-- coherent aggregated outputs returned by assessment API
+Chat now returns:
+- grounded answer
+- citations
+- confidence score
+- low-confidence fallback when evidence is weak
 
-Assessment scoring endpoint now uses multi-agent outputs to improve specialization and reasoning quality.
+
+## AI Evaluation Framework
+
+Evaluation assets are in `evals/`:
+- `datasets/golden_tests.json` (golden test dataset)
+- `scoringMetrics.mjs` (retrieval precision, grounding score, answer consistency, hallucination rate)
+- `run-evals.mjs` (evaluation runner)
+- `reports/*.json` (generated evaluation reports)
+
+Run locally:
+```bash
+npm run evals
+```
+
+This enables prompt regression benchmarking and local quality checks before prompt/retrieval changes ship.
+
+
+## Phase 6: Dynamic Assessment Engine
+
+Added:
+- Dynamic assessment flow on `/assessment` covering:
+  - Strategic thinking
+  - Enterprise architecture
+  - AI capability
+  - Execution maturity
+  - Leadership
+  - Systems thinking
+- Answer capture and submission to `POST /api/assessment/score`
+- AI scoring using OpenAI
+- Score persistence into `assessments` and `assessment_scores` tables
+- Results page at `/assessment/results/[assessmentId]` with per-dimension and overall score
+
+
+## Phase 7: Fit Report Generation
+
+Added report generation and display on `/reports`:
+- Executive summary
+- Capability scores
+- Evidence-backed strengths
+- Risk areas
+- Recommended role fit
+- Final recommendation
+
+API routes:
+- `POST /api/reports/generate`
+- `GET /api/reports?userId=<uuid>`
+- `GET /api/reports/[reportId]/export` (PDF download endpoint)
+
+Reports are stored in `reports` table (`report_json`).
+
+
+## Retrieval Quality Optimization
+
+Implemented retrieval-quality upgrades for RAG chat:
+- Hybrid retrieval (semantic + keyword)
+- Metadata filtering support (`documentId`)
+- Reranking pipeline
+- Chunk overlap optimization for ingestion
+- Citation formatting support
+- Retrieval confidence scoring with low-confidence fallback
+
+New services:
+- `lib/services/retrievalService.ts`
+- `lib/services/reranker.ts`
+- `lib/services/citationFormatter.ts`
+
+Chat now returns:
+- grounded answer
+- citations
+- confidence score
+- low-confidence fallback when evidence is weak
+## Phase 6: Dynamic Assessment Engine
+
+Added:
+- Dynamic assessment flow on `/assessment` covering:
+  - Strategic thinking
+  - Enterprise architecture
+  - AI capability
+  - Execution maturity
+  - Leadership
+  - Systems thinking
+- Answer capture and submission to `POST /api/assessment/score`
+- AI scoring using OpenAI
+- Score persistence into `assessments` and `assessment_scores` tables
+- Results page at `/assessment/results/[assessmentId]` with per-dimension and overall score
+- AI features are intentionally not implemented in Phase 1.
+- Supabase client is initialized in `lib/supabase.ts` and validates required environment variables.

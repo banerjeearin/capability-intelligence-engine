@@ -130,17 +130,52 @@ export async function POST(request: NextRequest) {
         baseScore = Math.max(1, Math.min(10, Number(parsed.score) || 1));
         rationaleText = parsed.rationale ?? rationaleText;
       }
+      const scoringTemplate = loadPrompt('scoring', 'score_answer', 'v1');
+      const prompt = composePrompt(scoringTemplate, {
+        dimension: question.dimension,
+        question: question.prompt,
+        answer
+      });
+      const prompt = `Score this answer from 1 to 10 for dimension ${question.dimension}. Return JSON: {"score": number, "rationale": string}.\nQuestion: ${question.prompt}\nAnswer: ${answer}`;
+      const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${openAiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1-mini',
+          temperature: 0.1,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: 'You are an enterprise AI transformation assessor.' },
+            { role: 'user', content: prompt }
+          ]
+        })
+      });
+
+      if (!aiRes.ok) {
+        return NextResponse.json({ error: 'AI scoring failed.', details: await aiRes.text() }, { status: 500 });
+      }
+
+      const aiPayload = await aiRes.json();
+      const content = aiPayload.choices?.[0]?.message?.content ?? '{}';
+      const parsed = JSON.parse(content) as { score?: number; rationale?: string };
+      const baseScore = Math.max(1, Math.min(10, Number(parsed.score) || 1));
       const seedNodes = mapAnswersToSeedNodes(answer, graph.nodes);
       const traversed = traverseCapabilities(seedNodes, graph.edges, 2);
       const adjacencyScore = scoreCapabilityAdjacency(seedNodes, traversed, graph.edges);
       const graphBoost = Math.min(1.5, adjacencyScore * 0.2);
       const score = Math.max(1, Math.min(10, Number((baseScore + graphBoost).toFixed(2))));
       const inferences = inferStrategicFit(traversed, graph.nodes).slice(0, 3);
+      const score = Math.max(1, Math.min(10, Number(parsed.score) || 1));
 
       scoreRows.push({
         dimension: question.dimension,
         score,
         rationale: `${rationaleText} Graph inference: ${inferences.join('; ') || 'none'}.`
+        rationale: `${parsed.rationale ?? 'No rationale provided.'} Graph inference: ${inferences.join('; ') || 'none'}.`
+        rationale: parsed.rationale ?? 'No rationale provided.'
       });
     }
 
@@ -175,6 +210,7 @@ export async function POST(request: NextRequest) {
         communication_events: orchestration.memory.messages.length
       }
     });
+    return NextResponse.json({ assessmentId: assessment.id, scores: scoreRows });
   } catch (error) {
     return NextResponse.json(
       { error: 'Assessment scoring failed.', details: error instanceof Error ? error.message : 'Unknown error' },

@@ -1,6 +1,7 @@
 import { langsmithHeaders, startSpan, startTrace, endSpan } from '@/lib/observability/tracing';
 
 export async function generateEmbeddings(texts: string[], parentTraceId?: string): Promise<number[][]> {
+export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY is required for embeddings.');
@@ -17,6 +18,7 @@ export async function generateEmbeddings(texts: string[], parentTraceId?: string
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       ...langsmithHeaders(span)
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       model: 'text-embedding-3-small',
@@ -32,5 +34,9 @@ export async function generateEmbeddings(texts: string[], parentTraceId?: string
 
   const payload = (await response.json()) as { data: Array<{ embedding: number[] }>; usage?: { prompt_tokens?: number; total_tokens?: number } };
   endSpan(span, { ok: true, usage: payload.usage ?? null });
+    throw new Error(`OpenAI embeddings request failed: ${details}`);
+  }
+
+  const payload = (await response.json()) as { data: Array<{ embedding: number[] }> };
   return payload.data.map((item) => item.embedding);
 }
