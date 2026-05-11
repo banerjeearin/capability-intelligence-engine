@@ -3,6 +3,7 @@ import { assessmentQuestions, AssessmentDimension } from '@/lib/assessment/quest
 import { loadPrompt } from '@/lib/prompts/promptLoader';
 import { composePrompt } from '@/lib/prompts/promptComposer';
 import { OrchestrationManager } from '@/lib/agents/orchestrationManager';
+import { getAuthContext, requireOrgRole, assertResourceInOrg } from '@/lib/auth/rbac';
 import { buildAssessmentAgents } from '@/lib/agents/assessmentAgents';
 import {
   inferStrategicFit,
@@ -31,6 +32,9 @@ function getServerConfig() {
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId: authUserId, organizationId } = getAuthContext(request);
+    await requireOrgRole(authUserId, organizationId, ['admin', 'reviewer', 'member']);
+
     const body = (await request.json()) as {
       userId?: string;
       title?: string;
@@ -41,6 +45,7 @@ export async function POST(request: NextRequest) {
     const title = body.title?.trim() || 'Transformation Fit Assessment';
     const answers = body.answers ?? [];
 
+    if (!userId || userId !== authUserId || answers.length !== assessmentQuestions.length) {
     if (!userId || answers.length !== assessmentQuestions.length) {
       return NextResponse.json({ error: 'userId and all assessment answers are required.' }, { status: 400 });
     }
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         Prefer: 'return=representation'
       },
+      body: JSON.stringify({ user_id: userId, organization_id: organizationId, title, status: 'completed' })
       body: JSON.stringify({ user_id: userId, title, status: 'completed' })
     });
 
@@ -222,15 +228,22 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { userId: authUserId, organizationId } = getAuthContext(request);
+    await requireOrgRole(authUserId, organizationId, ['admin', 'reviewer', 'member']);
+
     const assessmentId = request.nextUrl.searchParams.get('assessmentId')?.trim();
     if (!assessmentId) {
       return NextResponse.json({ error: 'assessmentId is required.' }, { status: 400 });
     }
 
+    await assertResourceInOrg('assessments', assessmentId, organizationId);
+
     const { supabaseUrl, serviceRoleKey } = getServerConfig();
     const query = new URLSearchParams({
       assessment_id: `eq.${assessmentId}`,
       select: 'dimension,score,rationale',
+      order: 'dimension.asc',
+      user_id: `eq.${authUserId}`
       order: 'dimension.asc'
     });
 

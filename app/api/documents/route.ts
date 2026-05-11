@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthContext, requireOrgRole } from '@/lib/auth/rbac';
 
 function getSupabaseServerConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,6 +14,13 @@ function getSupabaseServerConfig() {
 
 export async function GET(request: NextRequest) {
   try {
+    const { userId: authUserId, organizationId } = getAuthContext(request);
+    await requireOrgRole(authUserId, organizationId, ['admin', 'reviewer', 'member']);
+
+    const userId = request.nextUrl.searchParams.get('userId')?.trim();
+
+    if (!userId || userId !== authUserId) {
+      return NextResponse.json({ error: 'userId query param must match authenticated user.' }, { status: 400 });
     const userId = request.nextUrl.searchParams.get('userId')?.trim();
 
     if (!userId) {
@@ -23,6 +31,8 @@ export async function GET(request: NextRequest) {
     const query = new URLSearchParams({
       user_id: `eq.${userId}`,
       select: 'id,file_name,file_path,mime_type,file_size_bytes,status,created_at',
+      order: 'created_at.desc',
+      organization_id: `eq.${organizationId}`
       order: 'created_at.desc'
     });
 

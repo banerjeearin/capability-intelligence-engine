@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthContext, requireOrgRole } from '@/lib/auth/rbac';
 
 const ALLOWED_TYPES = new Set([
   'application/pdf',
@@ -22,6 +23,9 @@ function getSupabaseServerConfig() {
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId: authUserId, organizationId } = getAuthContext(request);
+    await requireOrgRole(authUserId, organizationId, ['admin', 'member']);
+
     const formData = await request.formData();
     const file = formData.get('file');
     const userId = String(formData.get('userId') ?? '').trim();
@@ -30,6 +34,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
     }
 
+    if (!userId || userId !== authUserId) {
+      return NextResponse.json({ error: 'userId must match authenticated user.' }, { status: 400 });
     if (!userId) {
       return NextResponse.json({ error: 'userId is required.' }, { status: 400 });
     }
@@ -79,6 +85,8 @@ export async function POST(request: NextRequest) {
         file_path: filePath,
         mime_type: file.type,
         file_size_bytes: file.size,
+        status: 'uploaded',
+        organization_id: organizationId
         status: 'uploaded'
       })
     });
