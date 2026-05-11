@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { PageShell } from '@/components/layout/page-shell';
+import { Button } from '@/components/ui/button';
+import { demoDocuments, demoOrgId, demoUserId } from '@/lib/demoData';
 import { DocumentRecord } from '@/types/document';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -12,9 +14,14 @@ export default function DashboardPage() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     async function loadDocuments() {
+      if (isDemoMode) {
+        return;
+      }
+
       if (!userId || !orgId) {
         setDocuments([]);
         setError('');
@@ -49,58 +56,84 @@ export default function DashboardPage() {
     }
 
     loadDocuments();
-  }, [userId, orgId]);
+  }, [userId, orgId, isDemoMode]);
+
+  function loadSyntheticData() {
+    setUserId(demoUserId);
+    setOrgId(demoOrgId);
+    setDocuments(demoDocuments);
+    setError('');
+    setIsDemoMode(true);
+  }
 
   return (
     <PageShell title="Dashboard">
-      <div className="mb-4 grid max-w-2xl gap-3 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium">User ID</span>
-          <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-            placeholder="Enter user UUID"
-            value={userId}
-            onChange={(event) => setUserId(event.target.value)}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium">Organization ID</span>
-          <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-            placeholder="Enter organization UUID"
-            value={orgId}
-            onChange={(event) => setOrgId(event.target.value)}
-          />
-        </label>
-      </div>
+      <section className="app-section mb-6">
+        <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+          <div>
+            <p className="eyebrow mb-2">Document intelligence</p>
+            <h2 className="text-xl font-semibold text-slate-950">Evidence library</h2>
+            <p className="mt-1 text-sm text-slate-600">Review uploaded artifacts for a specific user and organization scope.</p>
+          </div>
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              {documents.length} documents{isDemoMode ? ' · synthetic' : ''}
+            </div>
+            <Button className="w-full md:w-auto" type="button" variant="outline" onClick={loadSyntheticData}>
+              Load Synthetic Data
+            </Button>
+          </div>
+        </div>
 
-      {isLoading ? <p className="text-slate-600">Loading documents...</p> : null}
-      {error ? <p className="mb-3 text-sm font-medium text-red-700">{error}</p> : null}
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="field-label">User ID</span>
+            <input
+              className="field-input"
+              placeholder="Enter user UUID"
+              value={userId}
+              onChange={(event) => setUserId(event.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="field-label">Organization ID</span>
+            <input
+              className="field-input"
+              placeholder="Enter organization UUID"
+              value={orgId}
+              onChange={(event) => setOrgId(event.target.value)}
+            />
+          </label>
+        </div>
+      </section>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b bg-slate-100">
+      {isLoading ? <p className="status-note mb-4">Loading documents...</p> : null}
+      {error ? <p className="status-error mb-4">{error}</p> : null}
+
+      <div className="app-card overflow-x-auto">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-4 py-3">File Name</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Size (bytes)</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Uploaded</th>
+              <th>File Name</th>
+              <th>Type</th>
+              <th>Size (bytes)</th>
+              <th>Status</th>
+              <th>Uploaded</th>
             </tr>
           </thead>
           <tbody>
             {documents.map((doc) => (
-              <tr key={doc.id} className="border-b last:border-0">
-                <td className="px-4 py-3">{doc.file_name}</td>
-                <td className="px-4 py-3">{doc.mime_type ?? 'unknown'}</td>
-                <td className="px-4 py-3">{doc.file_size_bytes ?? 0}</td>
-                <td className="px-4 py-3">{doc.status}</td>
-                <td className="px-4 py-3">{new Date(doc.created_at).toLocaleString()}</td>
+              <tr key={doc.id}>
+                <td className="font-medium text-slate-950">{doc.file_name}</td>
+                <td>{doc.mime_type ?? 'unknown'}</td>
+                <td>{doc.file_size_bytes ?? 0}</td>
+                <td>{doc.status}</td>
+                <td>{new Date(doc.created_at).toLocaleString()}</td>
               </tr>
             ))}
             {!documents.length && !isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={5}>
+                <td className="px-4 py-8 text-slate-500" colSpan={5}>
                   No documents found for this user.
                 </td>
               </tr>

@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { PageShell } from '@/components/layout/page-shell';
 import { Button } from '@/components/ui/button';
+import { demoAssessmentId, demoReports, demoUserId } from '@/lib/demoData';
 
 interface ReportRow {
   id: string;
@@ -67,42 +68,59 @@ export default function ReportsPage() {
     }
   }
 
+  function loadSyntheticReports() {
+    setUserId(demoUserId);
+    setAssessmentId(demoAssessmentId);
+    setReports(demoReports);
+    setError('');
+  }
+
   return (
     <PageShell title="Reports">
-      <form onSubmit={generateReport} className="mb-6 grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="User ID"
-          value={userId}
-          onChange={(event) => setUserId(event.target.value)}
-        />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="Assessment ID"
-          value={assessmentId}
-          onChange={(event) => setAssessmentId(event.target.value)}
-        />
-        <div className="flex gap-2">
-          <Button type="submit" disabled={loading}>
+      <form onSubmit={generateReport} className="app-section mb-6 grid gap-4">
+        <div>
+          <p className="eyebrow mb-2">Executive reporting</p>
+          <h2 className="text-xl font-semibold text-slate-950">Generate and review board-ready reports</h2>
+          <p className="mt-1 text-sm text-slate-600">Create a structured recommendation from a completed assessment.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <input
+            className="field-input"
+            placeholder="User ID"
+            value={userId}
+            onChange={(event) => setUserId(event.target.value)}
+          />
+          <input
+            className="field-input"
+            placeholder="Assessment ID"
+            value={assessmentId}
+            onChange={(event) => setAssessmentId(event.target.value)}
+          />
+        </div>
+        <div className="grid gap-2 sm:flex">
+          <Button className="w-full sm:w-auto" type="submit" disabled={loading}>
             {loading ? 'Generating...' : 'Generate Report'}
           </Button>
-          <Button type="button" variant="outline" onClick={loadReports}>
+          <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={loadReports}>
             Load Reports
+          </Button>
+          <Button className="w-full sm:w-auto" type="button" variant="outline" onClick={loadSyntheticReports}>
+            Load Synthetic Reports
           </Button>
         </div>
       </form>
 
-      {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="status-error mb-4">{error}</p> : null}
 
       <div className="space-y-4">
         {reports.map((report) => (
-          <div key={report.id} className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center justify-between">
+          <article key={report.id} className="app-section">
+            <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <p className="font-semibold">{report.title}</p>
+                <p className="text-lg font-semibold text-slate-950">{report.title}</p>
                 <p className="text-xs text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
               </div>
-              <a className="text-sm text-blue-600 underline" href={`/api/reports/${report.id}/export`}>
+              <a className="text-sm font-semibold text-slate-700 underline" href={`/api/reports/${report.id}/export`}>
                 Export PDF
               </a>
             </div>
@@ -126,7 +144,7 @@ export default function ReportsPage() {
               </ul>
             </div>
             <div className="mt-2 grid gap-2 text-sm md:grid-cols-2">
-              <div>
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
                 <p className="font-medium">Strengths</p>
                 <ul className="ml-5 list-disc">
                   {(report.report_json?.strengths ?? []).map((strength, index) => (
@@ -134,7 +152,7 @@ export default function ReportsPage() {
                   ))}
                 </ul>
               </div>
-              <div>
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
                 <p className="font-medium">Risk Areas</p>
                 <ul className="ml-5 list-disc">
                   {(report.report_json?.risk_areas ?? []).map((risk, index) => (
@@ -143,9 +161,9 @@ export default function ReportsPage() {
                 </ul>
               </div>
             </div>
-          </div>
+          </article>
         ))}
-        {!reports.length ? <p className="text-sm text-slate-500">No reports yet.</p> : null}
+        {!reports.length ? <p className="status-note">No reports yet.</p> : null}
       </div>
     </PageShell>
   );

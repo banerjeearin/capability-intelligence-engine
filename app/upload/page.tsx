@@ -57,40 +57,44 @@ export default function UploadPage() {
 
   return (
     <PageShell title="Upload Documents">
-      <form onSubmit={onSubmit} className="max-w-xl space-y-4 rounded-lg border border-slate-200 bg-white p-6">
-        <p className="text-sm text-slate-600">Accepted file types: PDF, DOCX, TXT, Markdown (max 10MB).</p>
+      <form onSubmit={onSubmit} className="app-section max-w-2xl space-y-5">
+        <div>
+          <p className="eyebrow mb-2">Evidence intake</p>
+          <h2 className="text-xl font-semibold text-slate-950">Add source material</h2>
+          <p className="mt-1 text-sm text-slate-600">Accepted file types: PDF, DOCX, TXT, Markdown. Maximum file size is 10MB.</p>
+        </div>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium">User ID</span>
+          <span className="field-label">User ID</span>
           <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            className="field-input"
             placeholder="Supabase auth user UUID"
             value={userId}
             onChange={(event) => setUserId(event.target.value)}
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium">Organization ID</span>
+          <span className="field-label">Organization ID</span>
           <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            className="field-input"
             placeholder="Organization UUID"
             value={orgId}
             onChange={(event) => setOrgId(event.target.value)}
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium">Select file</span>
+          <span className="field-label">Select file</span>
           <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            className="field-input py-2"
             type="file"
             accept={ACCEPTED_EXTENSIONS}
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
         </label>
-        <Button type="submit" disabled={isSubmitDisabled}>
+        <Button className="w-full sm:w-auto" type="submit" disabled={isSubmitDisabled}>
           {status === 'uploading' ? 'Uploading...' : 'Upload Document'}
         </Button>
         {message ? (
-          <p className={`text-sm ${status === 'error' ? 'text-red-600' : 'text-slate-700'}`} role="status">
+          <p className={status === 'error' ? 'status-error' : 'status-note'} role="status">
             {message}
           </p>
         ) : null}

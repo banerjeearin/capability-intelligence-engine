@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/layout/page-shell';
 import { Button } from '@/components/ui/button';
 import { assessmentQuestions } from '@/lib/assessment/questions';
+import { buildDemoAnswers, demoOrgId, demoUserId } from '@/lib/demoData';
 
 export default function AssessmentPage() {
   const router = useRouter();
@@ -53,50 +54,67 @@ export default function AssessmentPage() {
     }
   }
 
+  function loadSyntheticAssessment() {
+    setUserId(demoUserId);
+    setOrgId(demoOrgId);
+    setAnswers(buildDemoAnswers(assessmentQuestions.map((question) => question.id)));
+    setError('');
+  }
+
   return (
     <PageShell title="Dynamic Assessment">
       <form onSubmit={onSubmit} className="space-y-5">
-        <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-2">
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium">User ID</span>
-            <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
-              placeholder="Supabase user UUID"
-              value={userId}
-              onChange={(event) => setUserId(event.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium">Organization ID</span>
-            <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
-              placeholder="Organization UUID"
-              value={orgId}
-              onChange={(event) => setOrgId(event.target.value)}
-            />
-          </label>
-        </div>
-
-        {assessmentQuestions.map((question, index) => (
-          <div key={question.id} className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">{question.dimension.replace('_', ' ')}</p>
+        <section className="app-section">
+          <p className="eyebrow mb-2">Assessment setup</p>
+          <h2 className="text-xl font-semibold text-slate-950">Transformation leadership profile</h2>
+          <p className="mt-1 text-sm text-slate-600">Complete each dimension to generate a capability score and executive recommendation.</p>
+          <Button className="mt-5 w-full sm:w-auto" type="button" variant="outline" onClick={loadSyntheticAssessment}>
+            Fill Synthetic Assessment
+          </Button>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block font-medium">
-                {index + 1}. {question.prompt}
-              </span>
-              <textarea
-                className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2"
-                value={answers[question.id] ?? ''}
-                onChange={(event) => setAnswers((prev) => ({ ...prev, [question.id]: event.target.value }))}
+              <span className="field-label">User ID</span>
+              <input
+                className="field-input"
+                placeholder="Supabase user UUID"
+                value={userId}
+                onChange={(event) => setUserId(event.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="field-label">Organization ID</span>
+              <input
+                className="field-input"
+                placeholder="Organization UUID"
+                value={orgId}
+                onChange={(event) => setOrgId(event.target.value)}
               />
             </label>
           </div>
-        ))}
+        </section>
 
-        <Button type="submit" disabled={isSubmitting}>
+        <div className="grid gap-4">
+          {assessmentQuestions.map((question, index) => (
+            <section key={question.id} className="app-section">
+              <p className="eyebrow mb-2">{question.dimension.replace('_', ' ')}</p>
+              <label className="block">
+                <span className="mb-3 block text-base font-semibold text-slate-950">
+                  {index + 1}. {question.prompt}
+                </span>
+                <textarea
+                  className="field-textarea"
+                  value={answers[question.id] ?? ''}
+                  onChange={(event) => setAnswers((prev) => ({ ...prev, [question.id]: event.target.value }))}
+                />
+              </label>
+            </section>
+          ))}
+        </div>
+
+        <Button className="w-full sm:w-auto" type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Scoring...' : 'Submit Assessment'}
         </Button>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="status-error">{error}</p> : null}
       </form>
     </PageShell>
   );

@@ -59,31 +59,36 @@ export default function ChatPage() {
 
   return (
     <PageShell title="Chat Over Evidence">
-      <form onSubmit={onSubmit} className="mb-6 grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
-        {conversationId ? <p className="text-xs text-slate-500">Conversation: {conversationId}</p> : null}
+      <form onSubmit={onSubmit} className="app-section mb-6 grid gap-4">
+        <div>
+          <p className="eyebrow mb-2">Evidence copilot</p>
+          <h2 className="text-xl font-semibold text-slate-950">Ask a grounded question</h2>
+          <p className="mt-1 text-sm text-slate-600">Responses are intended to stay connected to uploaded evidence and citations.</p>
+        </div>
+        {conversationId ? <p className="status-note">Conversation: {conversationId}</p> : null}
         <input
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className="field-input"
           placeholder="User ID"
           value={userId}
           onChange={(event) => setUserId(event.target.value)}
         />
         <textarea
-          className="min-h-24 rounded-md border border-slate-300 px-3 py-2"
+          className="field-textarea"
           placeholder="Ask a question about uploaded evidence..."
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
         />
-        <Button type="submit" disabled={isLoading}>
+        <Button className="w-full sm:w-auto" type="submit" disabled={isLoading}>
           {isLoading ? 'Thinking...' : 'Ask'}
         </Button>
       </form>
 
-      {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="status-error mb-4">{error}</p> : null}
 
       <div className="space-y-3">
         {messages.map((message, index) => (
-          <div key={`${message.role}-${index}`} className="rounded-md border border-slate-200 bg-white p-4">
-            <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">{message.role}</p>
+          <div key={`${message.role}-${index}`} className="app-section">
+            <p className="eyebrow mb-2">{message.role}</p>
             <p className="whitespace-pre-wrap text-sm text-slate-800">{message.content}</p>
             {message.role === 'assistant' ? (
               <>
