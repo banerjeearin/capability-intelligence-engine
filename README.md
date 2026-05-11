@@ -4,6 +4,9 @@ Phase 1 foundation is built with Next.js, TypeScript, Tailwind CSS, and shadcn/u
 Phase 2 adds Supabase database migration foundations, including pgvector.
 
 ## Local Setup
+Phase 1 foundation built with Next.js, TypeScript, Tailwind CSS, shadcn/ui patterns, and Supabase client setup.
+
+## Setup
 
 1. Install dependencies:
    ```bash
@@ -168,3 +171,19 @@ Chat now returns:
 - citations
 - confidence score
 - low-confidence fallback when evidence is weak
+## Phase 6: Dynamic Assessment Engine
+
+Added:
+- Dynamic assessment flow on `/assessment` covering:
+  - Strategic thinking
+  - Enterprise architecture
+  - AI capability
+  - Execution maturity
+  - Leadership
+  - Systems thinking
+- Answer capture and submission to `POST /api/assessment/score`
+- AI scoring using OpenAI
+- Score persistence into `assessments` and `assessment_scores` tables
+- Results page at `/assessment/results/[assessmentId]` with per-dimension and overall score
+- AI features are intentionally not implemented in Phase 1.
+- Supabase client is initialized in `lib/supabase.ts` and validates required environment variables.
